@@ -2,8 +2,6 @@ import os
 import pandas as pd
 import datetime
 import logging
-import time
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,20 +21,6 @@ class DataSourceInterface:
         Returns: A pandas data frame of time series data.
         """
         raise NotImplementedError()
-
-
-def retry_if_exceptions(max_retry, exceptions, func, *args, **kwargs):
-    error = None
-    for _ in range(max_retry):
-        try:
-            results = func(*args, **kwargs)
-        except exceptions as ex:
-            error = ex
-            time.sleep(2)
-        else:
-            return results
-    else:
-        raise error
 
 
 class AlphaVantage(DataSourceInterface):
@@ -68,21 +52,26 @@ class AlphaVantage(DataSourceInterface):
             end = datetime.datetime.now().strftime("%Y-%m-%d")
 
         if self.cache:
-            table_name = "%s_%s" % (symbol, "DAILY")
-            filename = "%s_%s.csv" % (table_name, datetime.datetime.now().strftime("%Y%m%d"))
-            file_path = os.path.join(self.cache, filename)
-            if not os.path.exists(file_path):
+            file_path = self.__cache_file_path(symbol)
+            if os.path.exists(file_path):
+                print("Reading existing data...")
+                df = pd.read_csv(file_path, index_col=0)
+            else:
                 df = self._request_data(symbol, 'full')
                 print("Caching data...")
                 df.to_csv(file_path)
-            else:
-                print("Reading existing data...")
-                df = pd.read_csv(file_path, index_col=0)
+
         else:
             df = self._request_data(symbol, 'full')
 
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
         return df
+
+    def __cache_file_path(self, symbol):
+        table_name = "%s_%s" % (symbol, "DAILY")
+        filename = "%s_%s.csv" % (table_name, datetime.datetime.now().strftime("%Y%m%d"))
+        file_path = os.path.join(self.cache, filename)
+        return file_path
 
     def _request_data(self, symbol, output_size="compact"):
         """Requests data from AlphaVantage Server
