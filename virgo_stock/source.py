@@ -55,7 +55,7 @@ class AlphaVantage(DataSourceInterface):
             file_path = self.__cache_file_path(symbol)
             if os.path.exists(file_path):
                 print("Reading existing data...")
-                df = pd.read_csv(file_path, index_col=0)
+                df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
             else:
                 df = self._request_data(symbol, 'full')
                 print("Caching data...")
