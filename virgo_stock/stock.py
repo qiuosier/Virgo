@@ -109,8 +109,10 @@ class TimeSeries:
         values.reverse()
         if column_name is None:
             column_name = 'sma_%s' % n
-        self.df[column_name] = pd.Series(values, index=self.df.index)
-        return self.df[['timestamp', column_name]]
+        return pd.DataFrame(OrderedDict([
+            ('timestamp', self.df['timestamp'].copy()),
+            (column_name, pd.Series(values, index=self.df.index)),
+        ]))
 
 
 class Stock:
