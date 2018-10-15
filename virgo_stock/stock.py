@@ -1,5 +1,6 @@
 import datetime
 import pandas as pd
+import numpy as np
 from collections import OrderedDict
 from virgo_stock.source import DataSourceInterface
 
@@ -65,6 +66,53 @@ class DataPoint:
         return cls(timestamp, val_open, val_high, val_low, val_close, volume)
 
 
+class TimeSeries:
+    """Represents stock time series data.
+
+    Attributes:
+        df: A pandas data frame including columns of timestamp, open, high, low, close and volume.
+
+    """
+    def __init__(self, data_frame):
+        """Initializes the TimeSeries with a pandas data frame.
+
+        Args:
+            data_frame: A pandas data frame including columns of timestamp, open, high, low, close and volume.
+
+        """
+        self.df = data_frame
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            return self.df[item]
+        else:
+            return TimeSeries(self.df[item])
+
+    def sma(self, n=10, series_type='close', column_name=None):
+        """Simple Moving Average
+
+        Args:
+            n: Number of data points used to calculate each moving average value.
+            series_type: The price type used to calculate the moving average.
+            column_name:
+
+        Returns:
+
+        """
+        values = [None] * len(self.df)
+        ret = np.cumsum(np.flip(self.df[series_type].values, 0), dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        values[n - 1:] = ret[n - 1:] / n
+        values.reverse()
+        if column_name is None:
+            column_name = 'sma_%s' % n
+        self.df[column_name] = pd.Series(values, index=self.df.index)
+        return self.df[['timestamp', column_name]]
+
+
 class Stock:
     def __init__(self, symbol, data_source):
         """Initializes a Stock object.
@@ -92,19 +140,20 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame including daily timestamp, open, high, low, close and volume.
+        Returns: A TimeSeries object, which includes daily timestamp, open, high, low, close and volume.
+            Use daily_series().df to access the underlying pandas data frame.
 
         """
         start, end = Stock.__format_date_range(start, end)
 
         if self.__daily_series is None:
-            self.__daily_series = self.data_source.get_daily_series(self.symbol)
+            self.__daily_series = TimeSeries(self.data_source.get_daily_series(self.symbol))
 
-        df = self.__daily_series[
+        ts = self.__daily_series[
             (self.__daily_series['timestamp'] >= start) & (self.__daily_series['timestamp'] <= end)
         ]
 
-        return df
+        return ts
 
     def __aggregate_series(self, trans_func, start=None, end=None):
         """Gets a pandas data frame of aggregated stock data series.
@@ -115,12 +164,14 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame including aggregated timestamp, open, high, low, close and volume.
+        Returns: A TimeSeries object, which includes aggregated timestamp, open, high, low, close and volume.
+            Use __aggregate_series().df to access the underlying pandas data frame.
+            The timestamp of each data point (data frame row) is the first business day of the aggregation period.
 
         """
         attributes = ["timestamp", "open", "high", "low", "close", "volume"]
         start, end = Stock.__format_date_range(start, end)
-        df = self.daily_series(start, end)
+        df = self.daily_series(start, end).df
         # Initialization
         aggregated_points = []
         daily_points = []
@@ -164,7 +215,7 @@ class Stock:
                 for attr in attributes
             ])
         )
-        return aggregated_df
+        return TimeSeries(aggregated_df)
 
     def weekly_series(self, start=None, end=None):
         """Gets a pandas data frame of weekly stock data series.
@@ -173,7 +224,9 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame including daily timestamp, open, high, low, close and volume.
+        Returns: A TimeSeries object, which includes weekly timestamp, open, high, low, close and volume.
+            Use weekly_series().df to access the underlying pandas data frame.
+            The timestamp of each data point (data frame row) is the first business day of the week.
 
         """
         def transform_func(timestamp):
@@ -196,7 +249,9 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame including daily timestamp, open, high, low, close and volume.
+        Returns: A TimeSeries object, which includes monthly timestamp, open, high, low, close and volume.
+            Use monthly_series().df to access the underlying pandas data frame.
+            The timestamp of each data point (data frame row) is the first business day of the month.
 
         """
         def transform_func(timestamp):
