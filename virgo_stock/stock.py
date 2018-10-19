@@ -86,6 +86,15 @@ class TimeSeries:
         return len(self.df)
 
     def __getitem__(self, item):
+        """Extends the slices
+
+        See https://docs.python.org/2.3/whatsnew/section-slices.html
+        Args:
+            item:
+
+        Returns:
+
+        """
         if isinstance(item, str):
             return self.df[item]
         else:
@@ -109,10 +118,12 @@ class TimeSeries:
         values.reverse()
         if column_name is None:
             column_name = 'sma_%s' % n
-        return pd.DataFrame(OrderedDict([
+        df = pd.DataFrame(OrderedDict([
             ('timestamp', self.df['timestamp'].copy()),
             (column_name, pd.Series(values, index=self.df.index)),
         ]))
+        df.set_index('timestamp', inplace=True)
+        return df
 
 
 class Stock:
