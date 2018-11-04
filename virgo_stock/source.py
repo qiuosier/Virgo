@@ -79,6 +79,16 @@ class AlphaVantage(DataSourceInterface):
         return df
 
     def get_intraday_series(self, symbol, date=None):
+        """
+
+        Args:
+            symbol:
+            date:
+
+        Returns:
+
+        """
+        requested_date = date
         if date is None:
             date = datetime.datetime.now().strftime(self.date_fmt)
 
@@ -98,6 +108,11 @@ class AlphaVantage(DataSourceInterface):
         else:
             df = self.__request_data(symbol, series_type, 'full')
             df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
+
+        # When date is not specified, try to get data of the previous day if there is no data today
+        if df.empty and requested_date is None:
+            prev_date = (dt_date - datetime.timedelta(days=1)).strftime(self.date_fmt)
+            df = self.get_intraday_series(symbol, prev_date)
         return df
 
     def __intraday_get_full_data(self, symbol):
@@ -116,7 +131,7 @@ class AlphaVantage(DataSourceInterface):
                 date = str(name).split(" ")[0]
                 if not group[group.timestamp == date + " 16:00:00"].empty:
                     date_file_path = self.__cache_file_path(symbol, series_type, date)
-                    group.to_csv(date_file_path)
+                    group.reset_index(drop=True).to_csv(date_file_path)
         return df
 
     def __intraday_cache_valid(self, symbol):

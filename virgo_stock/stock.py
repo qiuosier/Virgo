@@ -100,12 +100,18 @@ class Stock:
         start, end = Stock.__format_date_range(start, end)
 
         if self.__daily_series is None:
-            self.__daily_series = TimeSeries(self.data_source.get_daily_series(self.symbol))
+            self.__daily_series = TimeSeries(
+                self.data_source.get_daily_series(self.symbol)
+            )
 
         ts = self.__daily_series[
             (self.__daily_series['timestamp'] >= start) & (self.__daily_series['timestamp'] <= end)
         ]
 
+        return ts
+
+    def intraday_series(self, date):
+        ts = TimeSeries(self.data_source.get_intraday_series(self.symbol, date))
         return ts
 
     def __aggregate_series(self, trans_func, start=None, end=None):
