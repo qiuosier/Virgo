@@ -34,6 +34,8 @@ class AlphaVantage(DataSourceInterface):
     def __init__(self, api_key, cache_folder=None):
         self.api_key = api_key
         self.cache = cache_folder
+        if not os.path.exists(self.cache):
+            os.makedirs(self.cache)
         self.intraday_cache_expiration = 30
 
     def get_daily_series(self, symbol, start=None, end=None):
@@ -172,7 +174,7 @@ class AlphaVantage(DataSourceInterface):
 
     def __intraday_cache_file_prefix(self, symbol):
         series_type = "TIME_SERIES_INTRADAY"
-        prefix = "%s_%s_cached" % (symbol, series_type)
+        prefix = "%s_%s_cached" % (symbol.upper(), series_type)
         return prefix
 
     def __intraday_cache_path_prefix(self, symbol):
@@ -192,7 +194,7 @@ class AlphaVantage(DataSourceInterface):
         """
         if date is None:
             date = datetime.datetime.now().strftime(self.date_fmt)
-        filename = "%s_%s_%s.csv" % (symbol, series_type, date)
+        filename = "%s_%s_%s.csv" % (symbol.upper(), series_type, date)
         file_path = os.path.join(self.cache, filename)
         return file_path
 
