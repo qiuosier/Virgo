@@ -147,4 +147,5 @@ temp/
 obj/
 bin/
 .vs/
+.vscode/
 copy_aries\.sh
