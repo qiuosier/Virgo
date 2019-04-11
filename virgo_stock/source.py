@@ -91,30 +91,32 @@ class AlphaVantage(DataSourceInterface):
 
         """
         requested_date = date
-        if date is None:
-            date = datetime.datetime.now().strftime(self.date_fmt)
-
-        dt_date = datetime.datetime.strptime(date, self.date_fmt)
-        dt_next = dt_date.date() + datetime.timedelta(days=1)
-        next_date = dt_next.strftime(self.date_fmt)
-
-        series_type = "TIME_SERIES_INTRADAY"
-        if self.cache:
-            file_path = self.__cache_file_path(symbol, series_type, date)
-            if os.path.exists(file_path):
-                print("Reading existing data...")
-                df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
-            else:
-                df = self.__intraday_get_full_data(symbol)
-                df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
-        else:
-            df = self.__request_data(symbol, series_type, 'full')
-            df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
-
+        day_delta = 0
+        df = None
         # When date is not specified, try to get data of the previous day if there is no data today
-        if df.empty and requested_date is None:
-            prev_date = (dt_date - datetime.timedelta(days=1)).strftime(self.date_fmt)
-            df = self.get_intraday_series(symbol, prev_date)
+        while df is None or (requested_date is None and df.empty and day_delta < 100):
+            if requested_date is None:
+                date = (datetime.datetime.now() - datetime.timedelta(days=day_delta)).strftime(self.date_fmt)
+            print("Getting data for %s" % date)
+            dt_date = datetime.datetime.strptime(date, self.date_fmt)
+            dt_next = dt_date.date() + datetime.timedelta(days=1)
+            next_date = dt_next.strftime(self.date_fmt)
+
+            series_type = "TIME_SERIES_INTRADAY"
+            if self.cache:
+                file_path = self.__cache_file_path(symbol, series_type, date)
+                if os.path.exists(file_path):
+                    print("Reading existing data...")
+                    df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
+                else:
+                    df = self.__intraday_get_full_data(symbol)
+                    df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
+            else:
+                df = self.__request_data(symbol, series_type, 'full')
+                df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
+
+            day_delta += 1
+
         return df
 
     def __intraday_get_full_data(self, symbol):
