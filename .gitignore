@@ -140,19 +140,14 @@ $RECYCLE.BIN/
 
 # =========================
 # Data files
-uploaded_files/
 temp/
 .idea/
-test_db\.sqlite3
 
 # Visual Studio
 obj/
 bin/
 .vs/
-database\.pyproj
-
-database\.pyproj\.user
-
-database\.sln
-
+.vscode/
 copy_aries\.sh
+
+jupyter_colab\.sh

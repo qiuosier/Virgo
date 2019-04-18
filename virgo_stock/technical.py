@@ -58,14 +58,7 @@ class TimeSeries:
         """
         if column_name is None:
             column_name = 'SMA_%s' % n
-
-        values = [None] * len(self.df)
-        ret = np.cumsum(np.flip(self.df[series_type].values, 0), dtype=float)
-        ret[n:] = ret[n:] - ret[:-n]
-        values[n - 1:] = ret[n - 1:] / n
-        values.reverse()
-        series = pd.Series(values, index=self.df.index)
-
+        series = self.df[series_type][::-1].rolling(n).mean()[::-1]
         return self.__timestamp_index(series, column_name)
 
     def ema(self, n=12, series_type='close', column_name=None):
