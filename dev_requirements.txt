@@ -1,0 +1,5 @@
+numpy==1.15.2
+pandas==0.23.4
+plotly
+jupyter
+jupyter_http_over_ws

@@ -6,6 +6,16 @@ logger = logging.getLogger(__name__)
 
 
 class DataSourceInterface:
+    """Provides methods for getting daily and intraday series data.
+    Subclasses must implement get_daily_series() and get_intraday_series().
+    Both methods should return a pandas data frame of time series data
+
+    See Also: pandas times series, https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+    
+    Raises:
+        NotImplementedError: get_daily_series() or get_intraday_series() is not implemented.
+
+    """
     def get_daily_series(self, symbol, start=None, end=None):
         """Gets a pandas data frame of daily stock data.
 
@@ -63,6 +73,7 @@ class AlphaVantage(DataSourceInterface):
         df = self.__get_daily_data(symbol)
 
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
+        
         return df
 
     def __get_daily_data(self, symbol):
