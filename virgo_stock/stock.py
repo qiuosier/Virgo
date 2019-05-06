@@ -133,8 +133,7 @@ class Stock:
         # Loop through the data IN REVERSE ORDER
         # The index may not start from 0 due to the filtering.
         prev_date_transformed = 0
-        for i, row in df.iterrows():
-            timestamp = df['timestamp'][i]
+        for timestamp, row in df.iterrows():
             # Try to parse the time stamp if it is not already datetime.
             if 'Timestamp' not in str(type(timestamp)):
                 timestamp = datetime.datetime.strptime(str(timestamp), "%Y-%m-%d")
@@ -152,7 +151,7 @@ class Stock:
 
             prev_date_transformed = date_transformed
             # Initialize a new daily data point
-            dp = DataPoint(*[[df.index[i]] + [df[attr][i] for attr in attributes]])
+            dp = DataPoint(timestamp, row["open"], row["high"], row["low"], row["close"], row["volume"])
             daily_points.append(dp)
 
         # Termination: Save the last aggregated point
@@ -166,14 +165,13 @@ class Stock:
         aggregated_df = pd.DataFrame(
             OrderedDict(
                 [
-                    pd.Series([p.timestamp for p in aggregated_points])
+                    ("timestamp", pd.Series([p.timestamp for p in aggregated_points]))
                 ] + [
-                    (attr, pd.Series(getattr(p, attr) for p in aggregated_points))
-                    for attr in attributes
+                    (attr, pd.Series(getattr(p, attr) for p in aggregated_points))for attr in attributes
                 ]
             )
         )
-        aggregated_df.reset_index("timestamp", inplace=True)
+        aggregated_df.set_index("timestamp", inplace=True)
         return aggregated_df
 
     def weekly_series(self, start=None, end=None):
