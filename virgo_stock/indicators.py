@@ -11,30 +11,15 @@ class TimeSeries:
     """Represents a Time Series Indicator, with data stored in a pandas data frame.
     
     This is the base class for time series indicators, e.g. moving average.
-    Usually this class is not use directly.
-    The calculate() method in this class does not do any calculation.
-    Instead, it create an series with None as the values.
-    Initializing this class with a data frame will add an column with None values to the data frame.
+    This is an abstract class and should not be used directly.
 
     """
-    def __init__(self, data_frame, series_type='close', name=None):
-        """Initializes a time series. A new column will be added to the data_frame.
-        
-        Args:
-            data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
-            series_type (str, optional): The name of the data column to be used in calculating the new indicator. 
-                Defaults to 'close'.
-            name (str or None, optional): The name for the new column containing the new indicator. 
-                Defaults to None.
-        """
+    def __init__(self, data_frame, name=None):
         self.df = data_frame
-        self.series_type = series_type
         # Determine the name of the column
         self.name = name
         if not self.name:
             self.name = self.default_name()
-        # Calculate the indicator
-        self.df[self.name] = self.calculate()
     
     def default_name(self):
         """Generates a default name for the time series data.
@@ -53,6 +38,40 @@ class TimeSeries:
                 return name
         return None
 
+    @property
+    def series(self):
+        """The pandas series (with datetime index) of the calculated indicator.
+        """
+        raise NotImplementedError()
+
+    def calculate(self):
+        raise NotImplementedError()
+
+
+class SingleSeries(TimeSeries):
+    """Represents a time series indicator with single series of data.
+
+    This class is not intended to be used directly.
+    The calculate() method in this class does not do any calculation.
+    Instead, it creates a series with None as the values.
+    Initializing this class with a data frame will add an column with None values to the data frame.
+    
+    """
+    def __init__(self, data_frame, series_type='close', name=None):
+        """Initializes a time series. A new column will be added to the data_frame.
+        
+        Args:
+            data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
+            series_type (str, optional): The name of the data column to be used in calculating the new indicator. 
+                Defaults to 'close'.
+            name (str or None, optional): The name for the new column containing the new indicator. 
+                Defaults to None.
+        """
+        super().__init__(data_frame, name)
+        self.series_type = series_type
+        # Calculate the indicator
+        self.df[self.name] = self.calculate()
+
     def calculate(self):
         """Creates an empty time series.
         
@@ -60,6 +79,15 @@ class TimeSeries:
             pandas.Series: Empty sereis.
         """
         return pd.Series([None] * len(self.df), index=self.df.index)
+    
+    @property
+    def series(self):
+        """The pandas series (with datetime index) of the calculated indicator.
+        
+        Returns:
+            pandas.Series: One-dimensional ndarray with datetime as axis label
+        """
+        return self.df.loc[:, self.name]
 
     @staticmethod
     def series_cross(series_n, series_k):
@@ -81,7 +109,41 @@ class TimeSeries:
         return series_n.index[crosses]
 
 
-class MovingAverage(TimeSeries):
+class MultiSeries(TimeSeries):
+    def __init__(self, data_frame, series_type='close', prefix=None):
+        """Initializes a multi-column time series. Multiple new columns will be added to the data_frame.
+        
+        Args:
+            data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
+            series_type (str, optional): The name of the data column to be used in calculating the new indicator. 
+                Defaults to 'close'.
+            name (str or None, optional): The name for the new column containing the new indicator. 
+                Defaults to None.
+        """
+        self.df = data_frame
+        self.series_type = series_type
+        # Determine the name of the column
+        self.name = prefix
+        if not self.name:
+            self.name = self.default_name()
+        self.names = []
+        self.calculate()
+
+    @property
+    def prefix(self):
+        return self.name
+
+    @property
+    def series(self):
+        """The pandas series (with datetime index) of the calculated indicator.
+        
+        Returns:
+            pandas.Series: One-dimensional ndarray with datetime as axis label
+        """
+        return self.df.loc[:, self.names]
+
+
+class MovingAverage(SingleSeries):
     def __init__(self, data_frame, n, series_type='close', name=None):
         """Initialize a moving average object.
         Args:
@@ -96,15 +158,6 @@ class MovingAverage(TimeSeries):
         """
         self.n = n
         super().__init__(data_frame, series_type, name)
-
-    @property
-    def series(self):
-        """The pandas series (with datetime index) of the calculated indicator.
-        
-        Returns:
-            pandas.Series: One-dimensional ndarray with datetime as axis label
-        """
-        return self.df.loc[:, self.name]
 
     def calculate(self):
         """Calculate the moving average series.
@@ -128,7 +181,7 @@ class MovingAverage(TimeSeries):
         """
         series_n = self.series
         series_k = series
-        return TimeSeries.series_cross(series_n, series_k)
+        return self.series_cross(series_n, series_k)
 
     @classmethod
     def n_breaking_k(cls, data_frame, n, k):
@@ -136,7 +189,7 @@ class MovingAverage(TimeSeries):
         """
         series_n = cls(data_frame, n).series
         series_k = cls(data_frame, k).series
-        return TimeSeries.series_cross(series_n, series_k)
+        return MovingAverage.series_cross(series_n, series_k)
 
     @classmethod
     def golden_cross(cls, data_frame, short_term=50, long_term=200):
@@ -168,8 +221,7 @@ class SMA(MovingAverage):
             pandas.Series: a pandas series containing the simple moving average.
         """
         series = self.df[self.series_type][::-1].rolling(self.n).mean()[::-1]
-        self.df[self.name] = series
-        return self.df.loc[:, self.name]
+        return series
 
 
 class EMA(MovingAverage):
@@ -192,6 +244,46 @@ class EMA(MovingAverage):
             pandas.Series: a pandas series containing the exponential moving average.
         """
         series = self.df[self.series_type][::-1].ewm(span=self.n).mean()[::-1]
-        self.df[self.name] = series
-        return self.df.loc[:, self.name]
+        return series
 
+
+class BollingerSeries(SingleSeries):
+    """A series which is K times an N-period standard deviation above or below the moving average (upper or lower Bollinger Band)
+
+    See Also:
+        https://en.wikipedia.org/wiki/Bollinger_Bands
+        https://www.bollingerbands.com/bollinger-bands
+    """
+    def __init__(self, data_frame, n_day=20, k_std=2, series_type='close', name=None):
+        self.n_day = n_day
+        self.k_std = k_std
+        super().__init__(data_frame, series_type, name)
+
+    def default_name(self):
+        return 'BB_%s_%+d' % (self.n_day, self.k_std)
+
+    def calculate(self):
+        moving_average = self.df[self.series_type][::-1].rolling(self.n_day).mean()[::-1]
+        standard_deviation = self.df[self.series_type][::-1].rolling(self.n_day).std()[::-1]
+        return moving_average.add(self.k_std * standard_deviation)
+
+
+class BollingerBands(MultiSeries):
+    def __init__(self, data_frame, n_day=20, k_std=2, series_type='close', prefix=None):
+        self.n_day = n_day
+        self.k_std = k_std
+        super().__init__(data_frame, series_type, prefix)
+
+    def default_name(self):
+        return 'BB_%s_%d' % (self.n_day, self.k_std)
+
+    def calculate(self):
+        self.names = [
+            self.prefix + "_upper",
+            self.prefix + "_lower",
+            self.prefix + "_sma",
+        ]
+        upper = BollingerSeries(self.df, self.n_day, self.k_std, self.series_type, self.names[0])
+        lower = BollingerSeries(self.df, self.n_day, -self.k_std, self.series_type, self.names[1])
+        sma = SMA(self.df, self.n_day, self.series_type, self.names[2])
+        return [upper, sma, lower]

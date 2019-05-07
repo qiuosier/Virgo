@@ -8,14 +8,14 @@ import os
 import sys
 from tests.base import TestWithAlphaVantage
 from virgo_stock.stock import Stock
-from virgo_stock.indicators import TimeSeries, SMA, EMA
+from virgo_stock.indicators import SingleSeries, SMA, EMA
 
 
 class TestTimeSeries(TestWithAlphaVantage):
-    def test_time_series_initialization(self):
+    def test_single_time_series_initialization(self):
         stock = Stock("AAPL", self.data_source)
         daily_series = stock.daily_series("2016-01-01", "2017-01-01")
-        TimeSeries(daily_series)
+        SingleSeries(daily_series)
         series_name = "Series_1"
         self.assertIn(series_name, daily_series.columns)
         for value in daily_series[series_name]:
