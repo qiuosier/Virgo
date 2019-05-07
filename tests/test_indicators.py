@@ -8,10 +8,20 @@ import os
 import sys
 from tests.base import TestWithAlphaVantage
 from virgo_stock.stock import Stock
-from virgo_stock.indicators import SMA, EMA
+from virgo_stock.indicators import TimeSeries, SMA, EMA
 
 
-class TestIndicators(TestWithAlphaVantage):
+class TestTimeSeries(TestWithAlphaVantage):
+    def test_time_series_initialization(self):
+        stock = Stock("AAPL", self.data_source)
+        daily_series = stock.daily_series("2016-01-01", "2017-01-01")
+        TimeSeries(daily_series)
+        series_name = "Series_1"
+        self.assertIn(series_name, daily_series.columns)
+        for value in daily_series[series_name]:
+            self.assertIsNone(value)
+
+class TestMovingAverage(TestWithAlphaVantage):
     def assert_set_values_equal(self, expect_set, actual_iterable):
         actual_set = set([str(s)[:10] for s in actual_iterable])
         self.assertEqual(actual_set, expect_set)
