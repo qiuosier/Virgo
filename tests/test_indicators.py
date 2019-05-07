@@ -14,7 +14,6 @@ from virgo_stock.indicators import SMA, EMA
 class TestIndicators(TestWithAlphaVantage):
     def assert_set_values_equal(self, expect_set, actual_iterable):
         actual_set = set([str(s)[:10] for s in actual_iterable])
-        print(actual_set)
         self.assertEqual(actual_set, expect_set)
 
     def test_sma(self):
