@@ -36,8 +36,8 @@ class TestIndicators(TestWithAlphaVantage):
         ])
         stock = Stock("VRTX", self.data_source)
         daily_series = stock.daily_series("2011-08-01", "2019-05-01")
-        golden_crosses = SMA(daily_series).golden_cross()
-        death_crosses = SMA(daily_series).death_cross()
+        golden_crosses = SMA.golden_cross(daily_series)
+        death_crosses = SMA.death_cross(daily_series)
         self.assert_set_values_equal(expect_golden_crosses, golden_crosses)
         self.assert_set_values_equal(expect_death_crosses, death_crosses)
 
@@ -63,8 +63,8 @@ class TestIndicators(TestWithAlphaVantage):
         ])
         stock = Stock("VRTX", self.data_source)
         daily_series = stock.daily_series("2011-08-01", "2019-05-01")
-        golden_crosses = EMA(daily_series).golden_cross()
-        death_crosses = EMA(daily_series).death_cross()
+        golden_crosses = EMA.golden_cross(daily_series)
+        death_crosses = EMA.death_cross(daily_series)
         self.assert_set_values_equal(expect_golden_crosses, golden_crosses)
         self.assert_set_values_equal(expect_death_crosses, death_crosses)
 
