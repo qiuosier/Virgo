@@ -8,7 +8,6 @@ import os
 import sys
 from tests.base import TestWithAlphaVantage
 from virgo_stock.stock import Stock
-from virgo_stock.source import AlphaVantage
 
 
 class TestStock(TestWithAlphaVantage):
@@ -29,8 +28,7 @@ class TestStock(TestWithAlphaVantage):
         """
         daily_data_file = os.path.join(self.fixtures, "AAPL_daily.xlsx")
         expect_df = pd.read_excel(daily_data_file, index_col=0)
-        data_source = AlphaVantage(self.api_key, self.cache_folder)
-        stock = Stock("AAPL", data_source)
+        stock = Stock("AAPL", self.data_source)
         actual_df = stock.daily_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)
 
@@ -39,8 +37,7 @@ class TestStock(TestWithAlphaVantage):
         """
         data_file = os.path.join(self.fixtures, "AAPL_weekly.xlsx")
         expect_df = pd.read_excel(data_file, index_col=0)
-        data_source = AlphaVantage(self.api_key, self.cache_folder)
-        stock = Stock("AAPL", data_source)
+        stock = Stock("AAPL", self.data_source)
         actual_df = stock.weekly_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)
 
@@ -49,7 +46,6 @@ class TestStock(TestWithAlphaVantage):
         """
         data_file = os.path.join(self.fixtures, "AAPL_monthly.xlsx")
         expect_df = pd.read_excel(data_file, index_col=0)
-        data_source = AlphaVantage(self.api_key, self.cache_folder)
-        stock = Stock("AAPL", data_source)
+        stock = Stock("AAPL", self.data_source)
         actual_df = stock.monthly_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)

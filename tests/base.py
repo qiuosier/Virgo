@@ -1,11 +1,11 @@
 import unittest
 import os
 import json
+from virgo_stock.source import AlphaVantage
 
 class TestWithAlphaVantage(unittest.TestCase):
     # Fixtures directory stored the test data.
     fixtures = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fixtures")
-
     # API Key required for getting data from AlphaVantage.
     key_file = os.path.join(fixtures, "private.json")
     api_key = None
@@ -20,4 +20,5 @@ class TestWithAlphaVantage(unittest.TestCase):
     cache_folder = os.path.join(fixtures, "..", "..", "..", "data", "stocks")
     if not os.path.exists(cache_folder):
         raise FileNotFoundError("Cache Folder does not exist.")
-    
+
+    data_source = AlphaVantage(api_key, cache_folder)
