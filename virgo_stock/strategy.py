@@ -46,7 +46,7 @@ class Strategy:
             setattr(self, key, value)
 
     def suggest(self, t=1):
-        """Suggests the action for time t using the data before t (excluding t)
+        """Suggests the price and shares of stock to buy/sell at time t.
             assuming t=0 for now, t=1 means the next time point, e.g. tomorrow.
 
             Generally prices at time > t should not be used for prediction.
@@ -146,3 +146,48 @@ class Strategy:
             p, s = self.suggest(t)
             self.trade(p, s, t)
         return self.profit(to_t - 1) - self.profit(from_t - 1)
+
+
+class GoldenCrossStrategy(Strategy):
+    """Represents a trading strategy of buying at golden crosses and selling at death crosses.
+    This is an example of inheriting the Strategy class.
+    """
+    def __init__(self, stock_data_frame, initial_cash=0, golden_crosses=[], death_crosses=[]):
+        """Initializes the strategy with golden crosses and death crosses.
+        This is unnecessary as the __init__() of Strategy will set additional keyword arguments
+            as attributes.
+        """
+        super().__init__(stock_data_frame, initial_cash)
+        self.golden_crosses = golden_crosses
+        self.death_crosses = death_crosses
+
+    def suggest(self, t):
+        """Determine the price and shares of stock to buy/sell at time t.
+        
+        This strategy checks if time t-1 is a golden cross or death cross.
+        If t-1 is a golden cross, buy 10 shares at time t at the highest price.
+        If t-1 is a death cross, sell all the position at time t at the lowest price.
+        The prices (buy at highest and sell at lowest) are conservative 
+            to guarantee successful trades.
+        """
+        prices = self.prices(t - 1)
+        if prices is None:
+            return 0, 0
+        date = prices.name
+        p = 0
+        s = 0
+        if date in self.golden_crosses:
+            print(date)
+            next_prices = self.prices(t)
+            if next_prices is not None:
+                p = next_prices.high
+                s = 10
+        if date in self.death_crosses:
+            print(date)
+            next_prices = self.prices(t)
+            if next_prices is not None:
+                p = next_prices.low
+                s = -self.position(t - 1)
+        if s != 0:
+            print((p, s))
+        return p, s
