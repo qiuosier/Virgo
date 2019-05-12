@@ -76,6 +76,3 @@ class TestMovingAverage(TestWithAlphaVantage):
         death_crosses = EMA.death_cross(daily_series)
         self.assert_set_values_equal(expect_golden_crosses, golden_crosses)
         self.assert_set_values_equal(expect_death_crosses, death_crosses)
-
-    def test_pass(self):
-        pass

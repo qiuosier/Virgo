@@ -76,7 +76,7 @@ class SingleSeries(TimeSeries):
         """Creates an empty time series.
         
         Returns:
-            pandas.Series: Empty sereis.
+            pandas.Series: Empty series.
         """
         return pd.Series([None] * len(self.df), index=self.df.index)
     
