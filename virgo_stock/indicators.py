@@ -8,7 +8,7 @@ The data frame stores data in reverse order, i.e. the first row is the latest da
 import pandas as pd
 
 
-class TimeSeries:
+class Indicator:
     """Represents a Time Series Indicator, with data stored in a pandas data frame.
     
     This is the base class for time series indicators, e.g. moving average.
@@ -50,7 +50,7 @@ class TimeSeries:
         raise NotImplementedError()
 
 
-class SingleSeries(TimeSeries):
+class SingleSeries(Indicator):
     """Represents a time series indicator with single series of data.
 
     This class is not intended to be used directly.
@@ -111,7 +111,7 @@ class SingleSeries(TimeSeries):
         return series_n.index[crosses]
 
 
-class MultiSeries(TimeSeries):
+class MultiSeries(Indicator):
     def __init__(self, data_frame, series_type='close', prefix=None):
         """Initializes a multi-column time series. 
         Multiple new columns will be added to the data_frame.
