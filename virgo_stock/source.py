@@ -8,7 +8,11 @@ logger = logging.getLogger(__name__)
 class DataSourceInterface:
     """Provides methods for getting daily and intraday series data.
     Subclasses must implement get_daily_series() and get_intraday_series().
-    Both methods should return a pandas data frame of time series data
+    Both methods should return a pandas data frame of time series data.
+    The returned pandas dataframe should:
+        1. Use decending timestamp as index, 
+            i.e. use the latest timestamp as the first data point index in the data frame.
+        2. Have the following 5 columns: open, high, low, close and volume
 
     See Also: pandas times series, https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
     
@@ -33,6 +37,14 @@ class DataSourceInterface:
         raise NotImplementedError()
 
     def get_intraday_series(self, symbol, date=None):
+        """Gets a pandas data frame of intraday stock data.
+        
+        Args:
+            symbol (str): The name of the equity/stock.
+            date (str, optional): Date, e.g. 2017-02-12. Defaults to None.
+
+        The data of the previous day will be returned if the date is None.
+        """
         raise NotImplementedError()
 
 
@@ -73,7 +85,7 @@ class AlphaVantage(DataSourceInterface):
         df = self.__get_daily_data(symbol)
 
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
-        
+        df.set_index('timestamp', inplace=True)
         return df
 
     def __get_daily_data(self, symbol):
@@ -127,6 +139,9 @@ class AlphaVantage(DataSourceInterface):
                 df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
 
             day_delta += 1
+        
+        if df is not None:
+            df.set_index('timestamp', inplace=True)
 
         return df
 
