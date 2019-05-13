@@ -2,7 +2,6 @@ import datetime
 import pandas as pd
 from collections import OrderedDict
 from virgo_stock.source import DataSourceInterface
-from virgo_stock.technical import TimeSeries
 
 
 class DataPoint:
@@ -80,6 +79,15 @@ class Stock:
 
     @staticmethod
     def __format_date_range(start, end):
+        """Sets the start and/or end date if not specified.
+        
+        Args:
+            start (str): Starting date.
+            end (str): Ending date.
+        
+        Returns:
+            (str, str): (start, end)
+        """
         if start is None:
             start = "1800-01-01"
         if end is None:
@@ -93,26 +101,14 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeSeries object, which includes daily timestamp, open, high, low, close and volume.
-            Use daily_series().df to access the underlying pandas data frame.
+        Returns: A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
 
         """
-        start, end = Stock.__format_date_range(start, end)
 
-        if self.__daily_series is None:
-            self.__daily_series = TimeSeries(
-                self.data_source.get_daily_series(self.symbol)
-            )
-
-        ts = self.__daily_series[
-            (self.__daily_series['timestamp'] >= start) & (self.__daily_series['timestamp'] <= end)
-        ]
-
-        return ts
+        return self.data_source.get_daily_series(self.symbol, start, end)
 
     def intraday_series(self, date):
-        ts = TimeSeries(self.data_source.get_intraday_series(self.symbol, date))
-        return ts
+        return self.data_source.get_intraday_series(self.symbol, date)
 
     def __aggregate_series(self, trans_func, start=None, end=None):
         """Gets a pandas data frame of aggregated stock data series.
@@ -123,14 +119,13 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeSeries object, which includes aggregated timestamp, open, high, low, close and volume.
-            Use __aggregate_series().df to access the underlying pandas data frame.
-            The timestamp of each data point (data frame row) is the first business day of the aggregation period.
+        Returns: A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+            The timestamp of each returned data point (data frame row) is the first timestamp of each aggregation period.
 
         """
-        attributes = ["timestamp", "open", "high", "low", "close", "volume"]
+        attributes = ["open", "high", "low", "close", "volume"]
         start, end = Stock.__format_date_range(start, end)
-        df = self.daily_series(start, end).df
+        df = self.daily_series(start, end)
         # Initialization
         aggregated_points = []
         daily_points = []
@@ -138,8 +133,7 @@ class Stock:
         # Loop through the data IN REVERSE ORDER
         # The index may not start from 0 due to the filtering.
         prev_date_transformed = 0
-        for i, row in df.iterrows():
-            timestamp = df['timestamp'][i]
+        for timestamp, row in df.iterrows():
             # Try to parse the time stamp if it is not already datetime.
             if 'Timestamp' not in str(type(timestamp)):
                 timestamp = datetime.datetime.strptime(str(timestamp), "%Y-%m-%d")
@@ -157,7 +151,7 @@ class Stock:
 
             prev_date_transformed = date_transformed
             # Initialize a new daily data point
-            dp = DataPoint(*[df[attr][i] for attr in attributes])
+            dp = DataPoint(timestamp, row["open"], row["high"], row["low"], row["close"], row["volume"])
             daily_points.append(dp)
 
         # Termination: Save the last aggregated point
@@ -169,12 +163,16 @@ class Stock:
 
         # Generate a new data frame from OrderedDict to preserve the order of the columns
         aggregated_df = pd.DataFrame(
-            OrderedDict([
-                (attr, pd.Series(getattr(p, attr) for p in aggregated_points))
-                for attr in attributes
-            ])
+            OrderedDict(
+                [
+                    ("timestamp", pd.Series([p.timestamp for p in aggregated_points]))
+                ] + [
+                    (attr, pd.Series(getattr(p, attr) for p in aggregated_points))for attr in attributes
+                ]
+            )
         )
-        return TimeSeries(aggregated_df)
+        aggregated_df.set_index("timestamp", inplace=True)
+        return aggregated_df
 
     def weekly_series(self, start=None, end=None):
         """Gets a pandas data frame of weekly stock data series.
@@ -183,8 +181,8 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeSeries object, which includes weekly timestamp, open, high, low, close and volume.
-            Use weekly_series().df to access the underlying pandas data frame.
+        Returns: A pandas data frame with weekly timestamp as index, 
+            as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the week.
 
         """
@@ -208,8 +206,8 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeSeries object, which includes monthly timestamp, open, high, low, close and volume.
-            Use monthly_series().df to access the underlying pandas data frame.
+        Returns: A pandas data frame with monthly timestamp as index, 
+            as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the month.
 
         """

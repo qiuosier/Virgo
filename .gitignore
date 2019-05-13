@@ -148,6 +148,10 @@ obj/
 bin/
 .vs/
 .vscode/
+
+# Credentials
+private.json
+
 copy_aries\.sh
 
 jupyter_colab\.sh
