@@ -20,5 +20,5 @@ class TestStrategy(TestWithAlphaVantage):
         df = stock.daily_series("2016-01-01", "2017-01-01")
         strategy = Strategy(df, 0)
         strategy.evaluate()
-        self.assertEqual(strategy.shares, len(df))
+        self.assertEqual(strategy.position(), len(df))
         self.assertEqual(strategy.equity(), df.iloc[0].close * (len(df)))

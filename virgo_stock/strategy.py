@@ -92,6 +92,8 @@ class Strategy:
         """The value of equity at the close of time t.
         """
         prices = self.prices(t)
+        if prices is None:
+            return 0
         return self.position(t) * prices.close
 
     def value(self, t=0):
