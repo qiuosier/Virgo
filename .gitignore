@@ -155,3 +155,5 @@ private.json
 copy_aries\.sh
 
 jupyter_colab\.sh
+
+tests/cache/

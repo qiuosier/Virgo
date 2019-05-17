@@ -92,6 +92,8 @@ class Strategy:
         """The value of equity at the close of time t.
         """
         prices = self.prices(t)
+        if prices is None:
+            return 0
         return self.position(t) * prices.close
 
     def value(self, t=0):
@@ -177,17 +179,13 @@ class GoldenCrossStrategy(Strategy):
         p = 0
         s = 0
         if date in self.golden_crosses:
-            print(date)
             next_prices = self.prices(t)
             if next_prices is not None:
                 p = next_prices.high
                 s = 10
         if date in self.death_crosses:
-            print(date)
             next_prices = self.prices(t)
             if next_prices is not None:
                 p = next_prices.low
                 s = -self.position(t - 1)
-        if s != 0:
-            print((p, s))
         return p, s
