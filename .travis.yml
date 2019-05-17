@@ -1,0 +1,11 @@
+branches:
+  only:
+  - master
+language: python
+cache: pip
+install:
+  - pip install -r requirements.txt
+  - pip install coverage python-coveralls
+script: coverage run --source=virgo_stock -m unittest discover -s tests -p "test_*.py"
+after_success:
+  - coveralls
