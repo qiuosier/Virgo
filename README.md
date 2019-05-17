@@ -38,4 +38,6 @@ Each indicator is defined as a class. In this way, each indicator can have diffe
 The `Strategy` class is designed to simulate and evaluate trading strategies. Trading strategies can be complicated. Each strategy should be implemented as a sub-class by the user.
 
 
-2018-2019 Qiu Qin. Under Development. All Right Reserved.
+2018-2019 Qiu Qin.
+All Right Reserved.
+The master branch does not contain the latest Development.
