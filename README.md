@@ -1,8 +1,8 @@
 # Virgo_Stocks
 Virgo Stock is a package for financial technical analysis. This package is develop with the mind of stock market data analysis.
 
-[![Build Status](https://travis-ci.org/qiuosier/Aries.svg?branch=master)](https://travis-ci.org/qiuosier/Virgo)
-[![Coverage Status](https://coveralls.io/repos/github/qiuosier/Aries/badge.svg?branch=master)](https://coveralls.io/github/qiuosier/Virgo?branch=master)
+[![Build Status](https://travis-ci.org/qiuosier/Virgo.svg?branch=master)](https://travis-ci.org/qiuosier/Virgo)
+[![Coverage Status](https://coveralls.io/repos/github/qiuosier/Virgo/badge.svg?branch=master)](https://coveralls.io/github/qiuosier/Virgo?branch=master)
 
 Calculating the __Technical Indicators__ is basic component of technical analysis. In addition, this package goes beyond the calculation to provide:
 * __Data Source Interface__ to minimize the number of outgoing API requests by organizing and caching data.
