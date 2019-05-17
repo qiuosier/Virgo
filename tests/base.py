@@ -12,13 +12,16 @@ class TestWithAlphaVantage(unittest.TestCase):
     if os.path.exists(key_file):
         with open(key_file) as f:
             api_key = json.load(f).get("AlphaVantage")
+
+    if os.environ["AlphaVantage_Key"]:
+        api_key = os.environ["AlphaVantage_Key"]
         
     if not api_key:
         raise FileNotFoundError("AlphaVantage API Key must be stored in \"fixtures/private.json\"")
 
     # Cache folder for AlphaVantage data
-    cache_folder = os.path.join(fixtures, "..", "..", "..", "data", "stocks")
+    cache_folder = os.path.join(fixtures, "..", "cache")
     if not os.path.exists(cache_folder):
-        raise FileNotFoundError("Cache Folder does not exist.")
+        os.makedirs(cache_folder)
 
     data_source = AlphaVantage(api_key, cache_folder)
