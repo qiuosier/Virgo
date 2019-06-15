@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import datetime
 import logging
+from Aries.tasks import FunctionTask
 logger = logging.getLogger(__name__)
 
 
@@ -97,7 +98,7 @@ class AlphaVantage(DataSourceInterface):
         """
         self.api_key = api_key
         self.cache = cache_folder
-        if not os.path.exists(self.cache):
+        if self.cache and not os.path.exists(self.cache):
             os.makedirs(self.cache)
         # Expiration time for intraday cache data (minutes)
         self.intraday_cache_expiration = 30
@@ -128,7 +129,10 @@ class AlphaVantage(DataSourceInterface):
             url += "&%s=%s" % (k, v)
         
         logger.info("Requesting %s data..." % symbol)
-        df = pd.read_csv(url, parse_dates=["timestamp"], infer_datetime_format=True)
+        
+        task = FunctionTask(pd.read_csv, url, parse_dates=["timestamp"], infer_datetime_format=True)
+        df = task.run_and_retry(base_interval=10)
+        # df = pd.read_csv(url, parse_dates=["timestamp"], infer_datetime_format=True)
         return df
 
     def __cache_file_path(self, symbol, series_type, date=None):
@@ -153,8 +157,8 @@ class AlphaVantage(DataSourceInterface):
 
     def get_daily_series(self, symbol, start=None, end=None):
         """Gets a pandas data frame of daily series data.
-        The data frame will contain 9 columns:
-            timestamp, open, high, low, close, adjusted_close, volume, dividend_amount, and split_coefficient
+        The data frame will contain timestamp index and 8 columns:
+            open, high, low, close, adjusted_close, volume, dividend_amount, and split_coefficient
 
         Args:
             symbol (str): The symbol of the equity/stock.
