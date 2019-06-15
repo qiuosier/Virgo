@@ -7,10 +7,9 @@ import pandas as pd
 import os
 import sys
 from tests.base import TestWithAlphaVantage
-from virgo_stock.stock import Stock
 
 
-class TestStock(TestWithAlphaVantage):
+class TestDataSource(TestWithAlphaVantage):
     def assert_data_frame(self, actual_df, expect_df):
         # Check if the data frames have the same number of rows
         self.assertEqual(len(actual_df), len(expect_df), "Data frames have different number of rows.")
@@ -28,7 +27,7 @@ class TestStock(TestWithAlphaVantage):
         """
         daily_data_file = os.path.join(self.fixtures, "AAPL_daily.xlsx")
         expect_df = pd.read_excel(daily_data_file, index_col=0)
-        stock = Stock("AAPL", self.data_source)
+        stock = self.get_stock("AAPL")
         actual_df = stock.daily_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)
 
@@ -37,7 +36,7 @@ class TestStock(TestWithAlphaVantage):
         """
         data_file = os.path.join(self.fixtures, "AAPL_weekly.xlsx")
         expect_df = pd.read_excel(data_file, index_col=0)
-        stock = Stock("AAPL", self.data_source)
+        stock = self.get_stock("AAPL")
         actual_df = stock.weekly_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)
 
@@ -46,6 +45,6 @@ class TestStock(TestWithAlphaVantage):
         """
         data_file = os.path.join(self.fixtures, "AAPL_monthly.xlsx")
         expect_df = pd.read_excel(data_file, index_col=0)
-        stock = Stock("AAPL", self.data_source)
+        stock = self.get_stock("AAPL")
         actual_df = stock.monthly_series("2015-01-01", "2017-01-01")
         self.assert_data_frame(actual_df, expect_df)

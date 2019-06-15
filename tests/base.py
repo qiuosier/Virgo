@@ -2,6 +2,7 @@ import unittest
 import os
 import json
 from virgo_stock.source import AlphaVantage
+from virgo_stock.stock import Stock
 
 class TestWithAlphaVantage(unittest.TestCase):
     # Fixtures directory stored the test data.
@@ -22,9 +23,15 @@ class TestWithAlphaVantage(unittest.TestCase):
             "or \"fixtures/private.json.\""
         )
 
-    # Cache folder for AlphaVantage data
-    cache_folder = os.path.join(fixtures, "..", "cache")
-    if not os.path.exists(cache_folder):
-        os.makedirs(cache_folder)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Cache folder for AlphaVantage data
+        self.cache_folder = os.path.join(self.fixtures, "..", "cache")
+        if not os.path.exists(self.cache_folder):
+            os.makedirs(self.cache_folder)
+        
+        self.data_source = AlphaVantage(self.api_key, self.cache_folder)
 
-    data_source = AlphaVantage(api_key, cache_folder)
+    def get_stock(self, symbol):
+        return Stock(symbol, self.data_source)
