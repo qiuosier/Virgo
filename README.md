@@ -1,5 +1,5 @@
 # Virgo_Stocks
-Virgo Stock is a package for financial technical analysis. This package is develop with the mind of stock market data analysis.
+Virgo Stock is a package for financial technical analysis. This package is develop with the mind of short term stock market data analysis.
 
 [![Build Status](https://travis-ci.org/qiuosier/Virgo.svg?branch=master)](https://travis-ci.org/qiuosier/Virgo)
 [![Coverage Status](https://coveralls.io/repos/github/qiuosier/Virgo/badge.svg?branch=master)](https://coveralls.io/github/qiuosier/Virgo?branch=master)
@@ -27,7 +27,7 @@ A `Stock` object represents a stock (or security). Stock objects provides method
 Once initialized, the stock series data are retrieved as a pandas DataFrame. The data frame will have at least 5 columns: open, high, low, close and volume. The first row of the data frame stores the latest data.
 
 ### Data Source
-This package relies on external source to provide market data. The `DataSourceInterface` acts as a layer between the data source and the `Stock` class. The `DataSourceInterface` is intended to provide a unified interface for accessing market data from different data source. The `AlphaVantage` data source is implemented in this package. The implementation here also caches the data to reduce the outgoing API requests.
+This package relies on external source to provide market data. The `DataSourceInterface` acts as a layer between the data source and the `Stock` class. The `DataSourceInterface` is intended to provide a unified interface for accessing market data from different data source. The `AlphaVantage` data source is implemented in this package. The implementation here also caches the data to reduce the outgoing API requests. Data source may implement cache to reduce external data requests.
 
 See also: https://www.alphavantage.co/
 
@@ -38,6 +38,6 @@ Each indicator is defined as a class. In this way, each indicator can have diffe
 The `Strategy` class is designed to simulate and evaluate trading strategies. Trading strategies can be complicated. Each strategy should be implemented as a sub-class by the user.
 
 
-2018-2019 Qiu Qin.
-All Right Reserved.
-The master branch does not contain the latest Development.
+2018-2019 Qiu Qin. All Right Reserved.
+
+This is a mirrored repository, which does not contain the latest Development.
