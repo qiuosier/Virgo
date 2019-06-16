@@ -1,8 +1,9 @@
 import os
+import io
 import pandas as pd
 import datetime
 import logging
-from Aries.tasks import FunctionTask
+from .alpha_vantage import AlphaVantageAPI
 logger = logging.getLogger(__name__)
 
 
@@ -102,6 +103,7 @@ class AlphaVantage(DataSourceInterface):
             os.makedirs(self.cache)
         # Expiration time for intraday cache data (minutes)
         self.intraday_cache_expiration = 30
+        self.web_api = AlphaVantageAPI(api_key, datatype="csv")
 
     def __request_data(self, symbol, series_type, output_size="compact", **kwargs):
         """Requests data from AlphaVantage Server.
@@ -117,21 +119,17 @@ class AlphaVantage(DataSourceInterface):
         Returns: A pandas data frame of time series data.
 
         """
-        url = "https://www.alphavantage.co/query?apikey=%s&symbol=%s&function=%s&datatype=csv&outputsize=%s" \
-              % (
-                  self.api_key,
-                  symbol,
-                  series_type,
-                  output_size,
-              )
-        # Add additional query strings
-        for k, v in kwargs.items():
-            url += "&%s=%s" % (k, v)
+        kwargs.update({
+            "symbol": symbol,
+            "function": series_type,
+            "outputsize": output_size,
+        })
         
         logger.info("Requesting %s data..." % symbol)
-        
-        task = FunctionTask(pd.read_csv, url, parse_dates=["timestamp"], infer_datetime_format=True)
-        df = task.run_and_retry(base_interval=10)
+        response = self.web_api.get(**kwargs)
+        # TODO: Check if the response is valid
+
+        df = pd.read_csv(io.BytesIO(response.content), parse_dates=["timestamp"], infer_datetime_format=True)
         # df = pd.read_csv(url, parse_dates=["timestamp"], infer_datetime_format=True)
         return df
 
