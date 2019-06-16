@@ -1,6 +1,8 @@
 import requests
 import time
 import datetime
+import io
+import pandas as pd
 from collections import deque
 from requests.exceptions import RequestException
 from Aries.tasks import FunctionTask
@@ -181,7 +183,7 @@ class AlphaVantageAPI(WebAPI):
         
         Returns: A dictionary
         """
-        response = self.get(**kwargs)
+        response = self.__get(**kwargs)
         # Additional error checking for JSON
         try:
             json_data = response.json()
@@ -211,7 +213,7 @@ class AlphaVantageAPI(WebAPI):
         
         
         Args:
-            max_retry (int): Max number of retry.
+            max_retry (int, optional): Max number of retry. Defaults to 5.
         
         Returns: A Response Object
 
@@ -232,9 +234,36 @@ class AlphaVantageAPI(WebAPI):
         
         
         Args:
-            max_retry (int): Max number of retry.
+            max_retry (int, optional): Max number of retry. Defaults to 5.
         
         Returns: A dictionary
 
         """
         return self.__try(self.__get_json, max_retry, **kwargs)
+
+    def get_dataframe(self, max_retry=5, **kwargs):
+        """Requests data and read them into a Pandas Data Frame
+        
+        Args:
+            max_retry (int, optional): Max number of retry. Defaults to 5.
+        
+        Returns: A pandas dataframe.
+
+        """
+        kwargs.update({
+            "datatype": "csv"
+        })
+        response = self.get(max_retry, **kwargs)
+        buffer = io.BytesIO(response.content)
+        try:
+            df = pd.read_csv(
+                buffer, 
+                parse_dates=["timestamp"],
+                infer_datetime_format=True
+            )
+        except Exception:
+            df = pd.read_csv(
+                buffer, 
+                infer_datetime_format=True
+            )
+        return df

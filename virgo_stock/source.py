@@ -126,11 +126,7 @@ class AlphaVantage(DataSourceInterface):
         })
         
         logger.info("Requesting %s data..." % symbol)
-        response = self.web_api.get(**kwargs)
-        # TODO: Check if the response is valid
-
-        df = pd.read_csv(io.BytesIO(response.content), parse_dates=["timestamp"], infer_datetime_format=True)
-        # df = pd.read_csv(url, parse_dates=["timestamp"], infer_datetime_format=True)
+        df = self.web_api.get_dataframe(**kwargs)
         return df
 
     def __cache_file_path(self, symbol, series_type, date=None):
