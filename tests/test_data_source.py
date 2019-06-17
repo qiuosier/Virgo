@@ -9,22 +9,13 @@ import sys
 import time
 import shutil
 from tests.base import TestWithAlphaVantage
-from virgo_stock.source import AlphaVantage
-from virgo_stock.source import DataSourceInterface
+from virgo_stock.alpha_vantage import AlphaVantageAPI
+from virgo_stock.source import DataSourceInterface, AlphaVantage
 
 
 class TestDataSource(TestWithAlphaVantage):
 
     cache = os.path.join(os.path.dirname(__file__), "empty_cache")
-
-    @classmethod
-    def setUpClass(cls):
-        # Wait 60 seconds before running tests.
-        time.sleep(60)
-
-    @classmethod
-    def tearDownClass(cls):
-        time.sleep(60)
 
     def tearDown(self):
         if os.path.exists(self.cache):
@@ -33,6 +24,7 @@ class TestDataSource(TestWithAlphaVantage):
     def assert_data_frame(self, df):
         self.assertIsNotNone(df)
         self.assertEqual(len(df.columns), 8, df.columns)
+        self.assertGreater(len(df.index), 0)
 
     def test_data_source_not_implemented(self):
         s = DataSourceInterface()
@@ -58,3 +50,12 @@ class TestDataSource(TestWithAlphaVantage):
         df2 = data_source.get_daily_series("AAPL")
         self.assert_data_frame(df1)
         self.assertEqual(len(df1), len(df2))
+
+class TestAlphaVantageAPI(TestWithAlphaVantage):
+    def test_make_7_api_requests(self):
+        web_api = AlphaVantageAPI(self.api_key)
+        print()
+        for i in range(7):
+            print("Requesting ... %s" % i)
+            json_data = web_api.get_json(symbol="AAPL", function="TIME_SERIES_DAILY_ADJUSTED")
+            self.assertIsNotNone(json_data.get("Time Series (Daily)"))

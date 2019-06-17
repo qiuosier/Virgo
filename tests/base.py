@@ -1,10 +1,10 @@
-import unittest
 import os
 import json
+from Aries.test import AriesTest
 from virgo_stock.source import AlphaVantage
 from virgo_stock.stock import Stock
 
-class TestWithAlphaVantage(unittest.TestCase):
+class TestWithAlphaVantage(AriesTest):
     # Fixtures directory stored the test data.
     fixtures = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fixtures")
     # API Key required for getting data from AlphaVantage.
