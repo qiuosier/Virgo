@@ -101,9 +101,14 @@ class AlphaVantage(DataSourceInterface):
         self.cache = cache_folder
         if self.cache and not os.path.exists(self.cache):
             os.makedirs(self.cache)
+
+        self.web_api = AlphaVantageAPI(api_key, datatype="csv")
+
+        # Expiration time for daily cache data (days)
+        self.daily_cache_expiration = 1
         # Expiration time for intraday cache data (minutes)
         self.intraday_cache_expiration = 30
-        self.web_api = AlphaVantageAPI(api_key, datatype="csv")
+        
 
     def __request_data(self, symbol, series_type, output_size="compact", **kwargs):
         """Requests data from AlphaVantage Server.
@@ -133,6 +138,9 @@ class AlphaVantage(DataSourceInterface):
         """Generates the cache file path.
 
         This class determine whether the data is cached by checking whether the cache file exists.
+        For daily data, the file contains all historical data.
+        For intraday data, the file contains the data for a single day.
+        This class uses an additional temporary cache file for intraday data that are available.
 
         Args:
             symbol (str): The symbol of the equity/stock.
@@ -150,7 +158,8 @@ class AlphaVantage(DataSourceInterface):
         return file_path
 
     def get_daily_series(self, symbol, start=None, end=None):
-        """Gets a pandas data frame of daily series data.
+        """
+        Gets a pandas data frame of daily series data.
         The data frame will contain timestamp index and 8 columns:
             open, high, low, close, adjusted_close, volume, dividend_amount, and split_coefficient
 
@@ -188,8 +197,8 @@ class AlphaVantage(DataSourceInterface):
         """
         series_type = "TIME_SERIES_DAILY_ADJUSTED"
         if self.cache:
-            file_path = self.__cache_file_path(symbol, series_type)
-            if os.path.exists(file_path):
+            file_path = self.__get_daily_cached_file(symbol)
+            if file_path:
                 logger.debug("Reading existing data... %s" % file_path)
                 df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
             else:
@@ -200,6 +209,23 @@ class AlphaVantage(DataSourceInterface):
             # Request data from server if no cache
             df = self.__request_data(symbol, series_type, 'full')
         return df
+
+    def __get_daily_cached_file(self, symbol):
+        """Gets the latest un-expired cache file for daily data.
+        
+        Args:
+            symbol (str): The symbol of the equity/stock.
+        
+        Returns:
+            str: File path if an un-expired cache file exists. Otherwise None.
+        """
+        series_type = "TIME_SERIES_DAILY_ADJUSTED"
+        for i in range(self.daily_cache_expiration):
+            d = datetime.datetime.now() - datetime.timedelta(days=i)
+            file_path = self.__cache_file_path(symbol, series_type, d.strftime(self.date_fmt))
+            if os.path.exists(file_path):
+                return file_path
+        return None
 
     def get_intraday_series(self, symbol, date=None):
         """Gets a pandas data frame of intraday series data.
