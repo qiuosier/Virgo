@@ -124,13 +124,22 @@ class AlphaVantageAPI(WebAPI):
         # Check if the request is over rate limit
         try:
             json_data = response.json()
-            if len(json_data) == 1 and json_data.get("Note") is not None:
-                raise RequestException(
-                    json_data.get("Note"),
-                    response=response
-                )
         except ValueError:
-            pass
+            # Return if the data is not JSON.
+            # AlphaVantage send errors in JSON
+            return
+
+        if len(json_data) == 1:
+            val = next(iter(json_data.values()))
+            if isinstance(val, str):
+                if "Invalid API call" in val:
+                    logger.debug(val)
+                    raise ValueError(str(json_data))
+                else:
+                    raise RequestException(
+                        str(json_data),
+                        response=response,
+                    )
 
     def __clean_history(self):
         """Removes the history of longer than 1 minute ago.
