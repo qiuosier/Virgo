@@ -23,6 +23,8 @@ class TestWithAlphaVantage(AriesTest):
             "or \"fixtures/private.json.\""
         )
 
+    logger_names = ["tests", "virgo_stock", "Aries"]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
