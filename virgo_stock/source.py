@@ -202,6 +202,7 @@ class AlphaVantage(DataSourceInterface):
                 logger.debug("Reading existing data... %s" % file_path)
                 df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
             else:
+                file_path = self.__cache_file_path(symbol, series_type)
                 df = self.__request_data(symbol, series_type, 'full')
                 logger.debug("Saving data... %s" % file_path)
                 df.to_csv(file_path)
@@ -220,6 +221,7 @@ class AlphaVantage(DataSourceInterface):
             str: File path if an un-expired cache file exists. Otherwise None.
         """
         series_type = "TIME_SERIES_DAILY_ADJUSTED"
+        symbol = str(symbol).replace(".", "-")
         for i in range(self.daily_cache_expiration):
             d = datetime.datetime.now() - datetime.timedelta(days=i)
             file_path = self.__cache_file_path(symbol, series_type, d.strftime(self.date_fmt))

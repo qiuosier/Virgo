@@ -2,11 +2,13 @@ import requests
 import time
 import datetime
 import io
+import logging
 import pandas as pd
 from collections import deque
 from requests.exceptions import RequestException
 from Aries.tasks import FunctionTask
 from Aries.web import WebAPI
+logger = logging.getLogger(__name__)
 
 
 class AlphaVantageAPI(WebAPI):
@@ -152,6 +154,13 @@ class AlphaVantageAPI(WebAPI):
         
         Returns: A Response Object
         """
+        # Replace "." with "-", 
+        # otherwise there will be an error when getting data from AlphaVantage.
+        logger.debug("Getting AlphaVantage Data...%s" % kwargs)
+        symbol = kwargs.get("symbol")
+        if symbol:
+            kwargs["symbol"] = symbol.replace(".", "-")
+
         # Build request URL
         url = self.build_url("", **kwargs)
 
