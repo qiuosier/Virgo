@@ -1,13 +1,13 @@
-# Alpha Vantage Data
+# Alpha Vantage API
 Alpha Vantage provides web API for stock data and more.
 
-This package implemented an `AlphaVantage` data source. The implementation here includes:
+This package implemented python classes for accessing the Alpha Vantage API, including:
 1. The `AlphaVantageAPI` class as a simple python API for accessing the AlphaVantage data.
-2. An option to cache the data to reduce the outgoing API requests.
+2. The `AlphaVantage` class as a "Data Source" with data caching.
 
 See also: https://www.alphavantage.co/
 
-## The AlphaVantageAPI
+## Using The AlphaVantageAPI
 The `AlphaVantageAPI` class defined in `alpha_vantage.py` provides a simple python API for accessing Alpha Vantage data. To use the API, simply initialize an instance with your API key and use the `get()` method. For example, to get the daily adjusted time series data of Apple Inc.:
 
 ```
@@ -38,3 +38,8 @@ The `AlphaVantageAPI` class keeps the recent request histories of each API key u
 Base on the "histories", it will wait (sleep) automatically before making new requests when there are already 5 requests in the last minute. Also, it will retry automatically when an error occurs.
 From the user perspective, it just looks like the request is taking a long time.
 Users do not need to worry about the delay and retry.
+
+## Symbols
+Special characters in stock symbols are handled as follows:
+* "." is replaced by "-".
+* "^" is removed.

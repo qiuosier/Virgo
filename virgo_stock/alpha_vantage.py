@@ -163,12 +163,12 @@ class AlphaVantageAPI(WebAPI):
         
         Returns: A Response Object
         """
-        # Replace "." with "-", 
+        # Replace "." with "-", and remove "^".
         # otherwise there will be an error when getting data from AlphaVantage.
         logger.debug("Getting AlphaVantage Data...%s" % kwargs)
         symbol = kwargs.get("symbol")
         if symbol:
-            kwargs["symbol"] = symbol.replace(".", "-")
+            kwargs["symbol"] = symbol.replace(".", "-").replace("^", "")
 
         # Build request URL
         url = self.build_url("", **kwargs)
@@ -203,9 +203,11 @@ class AlphaVantageAPI(WebAPI):
         """
         response = self.__get(**kwargs)
         # Additional error checking for JSON
+        json_data = None
         try:
             json_data = response.json()
         except ValueError:
+            logger.debug(response.content)
             raise RequestException(
                 "The response does not contain valid JSON.",
                 response=response
@@ -279,9 +281,9 @@ class AlphaVantageAPI(WebAPI):
                 parse_dates=["timestamp"],
                 infer_datetime_format=True
             )
-        except Exception:
+        except:
+            buffer.seek(0)
             df = pd.read_csv(
-                buffer, 
-                infer_datetime_format=True
+                buffer
             )
         return df

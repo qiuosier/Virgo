@@ -134,6 +134,9 @@ class AlphaVantage(DataSourceInterface):
         df = self.web_api.get_dataframe(**kwargs)
         return df
 
+    def get(self, **kwargs):
+        return self.web_api.get_dataframe(**kwargs)
+
     def __cache_file_path(self, symbol, series_type, date=None):
         """Generates the cache file path.
 
