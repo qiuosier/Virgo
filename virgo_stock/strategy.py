@@ -1,5 +1,6 @@
 class Strategy:
     """Represents a trading strategy.
+
     This is the base class for defining a trading strategy, 
         providing utility functions for evaluating the strategy.
     The actual trading strategy is defined in the suggest() method.
@@ -111,6 +112,20 @@ class Strategy:
             return None
         return self.df.iloc[-t]
 
+    def history(self, t):
+        """Historical data up to time t
+        """
+        if t > 0 or -t >= len(self.df):
+            return []
+        return self.df.iloc[-t:]
+
+    def date(self, t):
+        """The date at time t
+        """
+        if t > 0 or -t >= len(self.df):
+            return None
+        return self.df.index[-t]
+
     def trade(self, price, shares, t=None):
         """Trades shares with a particular price at time t
 
@@ -163,7 +178,7 @@ class GoldenCrossStrategy(Strategy):
         self.golden_crosses = golden_crosses
         self.death_crosses = death_crosses
 
-    def suggest(self, t):
+    def suggest(self, t=1):
         """Determine the price and shares of stock to buy/sell at time t.
         
         This strategy checks if time t-1 is a golden cross or death cross.
