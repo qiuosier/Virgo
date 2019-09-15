@@ -1,9 +1,9 @@
 import os
-import io
 import pandas as pd
 import datetime
 import logging
 from .alpha_vantage import AlphaVantageAPI
+from .stock import Stock
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +53,9 @@ class DataSourceInterface:
         Returns: A pandas data frame of intraday series data.
         """
         raise NotImplementedError()
+
+    def get_stock(self, symbol):
+        return Stock(symbol, self)
 
 
 class AlphaVantage(DataSourceInterface):
@@ -108,7 +111,6 @@ class AlphaVantage(DataSourceInterface):
         self.daily_cache_expiration = 1
         # Expiration time for intraday cache data (minutes)
         self.intraday_cache_expiration = 30
-        
 
     def __request_data(self, symbol, series_type, output_size="compact", **kwargs):
         """Requests data from AlphaVantage Server.
