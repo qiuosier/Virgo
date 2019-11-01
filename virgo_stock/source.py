@@ -191,6 +191,7 @@ class AlphaVantage(DataSourceInterface):
 
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
         df.set_index('timestamp', inplace=True)
+        df.symbol = symbol
         return df
 
     def __get_daily_data(self, symbol):
@@ -279,7 +280,7 @@ class AlphaVantage(DataSourceInterface):
         
         if df is not None:
             df.set_index('timestamp', inplace=True)
-
+        df.symbol = symbol
         return df
 
     def __intraday_get_full_data(self, symbol):

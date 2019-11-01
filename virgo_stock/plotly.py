@@ -4,7 +4,7 @@ class Candlestick(PlotlyFigure):
     INCREASING_COLOR = '#4CAF50'
     DECREASING_COLOR = '#E53935'
 
-    def __init__(self, data_frame, title):
+    def __init__(self, data_frame, title=""):
         self.df = data_frame
         layout = dict(
             xaxis=dict(
@@ -28,6 +28,11 @@ class Candlestick(PlotlyFigure):
             )
         )
         super().__init__(plotly_layout=layout)
+        self.set_title(title)
+        if hasattr(data_frame, "symbol"):
+            symbol = data_frame.symbol
+        else:
+            symbol = ""
         self.candle_stick(
             data_frame,
             increasing=dict(
@@ -39,7 +44,8 @@ class Candlestick(PlotlyFigure):
                 line=dict(
                     color=self.DECREASING_COLOR
                 )
-            )
+            ),
+            name=symbol
         )
         self.bar(
             data_frame.index, 

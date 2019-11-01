@@ -173,6 +173,7 @@ class Stock:
             )
         )
         aggregated_df.set_index("timestamp", inplace=True)
+        aggregated_df.symbol = self.symbol
         return aggregated_df
 
     def weekly_series(self, start=None, end=None):
