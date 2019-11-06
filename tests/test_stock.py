@@ -13,11 +13,6 @@ class TestDataSource(TestWithAlphaVantage):
     def assert_data_frame(self, actual_df, expect_df):
         # Check if the data frames have the same number of rows
         self.assertEqual(len(actual_df), len(expect_df), "Data frames have different number of rows.")
-        # Check the each data point of "open", "close", "high", "low", and "volume" columns
-        columns = ["open", "close", "high", "low", "volume"]
-        for col in columns:
-            for i in range(len(actual_df)):
-                self.assertEqual(round(actual_df.iloc[i][col], 2), round(expect_df.iloc[i][col], 2))
         # Check index
         for i in range(len(actual_df)):
             self.assertEqual(actual_df.index[i], expect_df.index[i])

@@ -38,7 +38,6 @@ class Indicator:
             name = "Series_%s" % i
             if name not in self.df.columns:
                 return name
-        return None
 
     @property
     def series(self):
@@ -80,7 +79,7 @@ class SingleSeries(Indicator):
         Returns:
             pandas.Series: Empty series.
         """
-        return pd.Series([None] * len(self.df), index=self.df.index)
+        return self.df[self.series_type]
     
     @property
     def series(self):
@@ -110,6 +109,12 @@ class SingleSeries(Indicator):
                 crosses.append(i)
         return series_n.index[crosses]
 
+    def local_minimums(self):
+        return self.series[(self.series.shift(1) > self.series) & (self.series.shift(-1) > self.series)]
+
+    def local_maximums(self):
+        return self.series[(self.series.shift(1) < self.series) & (self.series.shift(-1) < self.series)]
+
 
 class MultiSeries(Indicator):
     def __init__(self, data_frame, series_type='close', prefix=None):
@@ -120,15 +125,11 @@ class MultiSeries(Indicator):
             data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
             series_type (str, optional): The name of the data column to be used in calculating 
                 the new indicator. Defaults to 'close'.
-            name (str or None, optional): The name for the new column containing the new indicator. 
+            prefix (str or None, optional): The prefix for the new column containing the new indicator.
                 Defaults to None.
         """
-        self.df = data_frame
+        super().__init__(data_frame, prefix)
         self.series_type = series_type
-        # Determine the name of the column
-        self.name = prefix
-        if not self.name:
-            self.name = self.default_name()
         self.names = []
         self.calculate()
 
@@ -144,6 +145,9 @@ class MultiSeries(Indicator):
             pandas.Series: One-dimensional ndarray with datetime as axis label
         """
         return self.df.loc[:, self.names]
+
+    def calculate(self):
+        raise NotImplementedError()
 
 
 class MovingAverage(SingleSeries):
@@ -208,7 +212,6 @@ class MovingAverage(SingleSeries):
             long-term moving average.
         """
         return cls.n_breaking_k(data_frame, long_term, short_term)
-
 
 
 class SMA(MovingAverage):

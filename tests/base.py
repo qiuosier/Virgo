@@ -4,6 +4,7 @@ from Aries.test import AriesTest
 from virgo_stock.source import AlphaVantage
 from virgo_stock.stock import Stock
 
+
 class TestWithAlphaVantage(AriesTest):
     # Fixtures directory stored the test data.
     fixtures = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fixtures")
@@ -22,6 +23,8 @@ class TestWithAlphaVantage(AriesTest):
             "AlphaVantage API Key must be stored in environment variable \"AlphaVantage_Key\""
             "or \"fixtures/private.json.\""
         )
+
+    logger_names = ["tests", "virgo_stock", "Aries"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

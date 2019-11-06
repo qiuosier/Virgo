@@ -1,9 +1,10 @@
 import os
-import io
 import pandas as pd
 import datetime
 import logging
+from Aries.storage import StorageFolder, StorageFile
 from .alpha_vantage import AlphaVantageAPI
+from .stock import Stock
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +55,9 @@ class DataSourceInterface:
         """
         raise NotImplementedError()
 
+    def get_stock(self, symbol):
+        return Stock(symbol, self)
+
 
 class AlphaVantage(DataSourceInterface):
     """Implements the DataSourceInterface by getting data from AlphaVantage
@@ -99,11 +103,15 @@ class AlphaVantage(DataSourceInterface):
         """
         self.api_key = api_key
         self.cache = cache_folder
-        if self.cache and not os.path.exists(self.cache):
-            os.makedirs(self.cache)
+        if self.cache:
+            StorageFolder.init(self.cache).create()
+
+        self.web_api = AlphaVantageAPI(api_key, datatype="csv")
+
+        # Expiration time for daily cache data (days)
+        self.daily_cache_expiration = 1
         # Expiration time for intraday cache data (minutes)
         self.intraday_cache_expiration = 30
-        self.web_api = AlphaVantageAPI(api_key, datatype="csv")
 
     def __request_data(self, symbol, series_type, output_size="compact", **kwargs):
         """Requests data from AlphaVantage Server.
@@ -133,6 +141,9 @@ class AlphaVantage(DataSourceInterface):
         """Generates the cache file path.
 
         This class determine whether the data is cached by checking whether the cache file exists.
+        For daily data, the file contains all historical data.
+        For intraday data, the file contains the data for a single day.
+        This class uses an additional temporary cache file for intraday data that are available.
 
         Args:
             symbol (str): The symbol of the equity/stock.
@@ -145,12 +156,42 @@ class AlphaVantage(DataSourceInterface):
         """
         if date is None:
             date = datetime.datetime.now().strftime(self.date_fmt)
+        symbol = str(symbol).replace(".", "-")
         filename = "%s_%s_%s.csv" % (symbol.upper(), series_type, date)
         file_path = os.path.join(self.cache, filename)
         return file_path
 
+    def __get_daily_data(self, symbol):
+        """Gets all daily data as a panda data frame.
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns: A pandas data frame of all daily series data.
+        """
+        series_type = "TIME_SERIES_DAILY_ADJUSTED"
+        if self.cache:
+            file_obj = self.get_daily_cached_file(symbol)
+            if file_obj:
+                logger.debug("Reading existing data... %s" % file_obj)
+                df = pd.read_csv(file_obj, index_col=0, parse_dates=['timestamp'])
+            else:
+                file_path = self.__cache_file_path(symbol, series_type)
+                df = self.__request_data(symbol, series_type, 'full')
+                logger.debug("Saving data... %s" % file_path)
+                with StorageFile.init(file_path) as f:
+                    df.to_csv(f)
+        else:
+            # Request data from server if no cache
+            df = self.__request_data(symbol, series_type, 'full')
+        return df
+
+    def get(self, **kwargs):
+        return self.web_api.get_dataframe(**kwargs)
+
     def get_daily_series(self, symbol, start=None, end=None):
-        """Gets a pandas data frame of daily series data.
+        """
+        Gets a pandas data frame of daily series data.
         The data frame will contain timestamp index and 8 columns:
             open, high, low, close, adjusted_close, volume, dividend_amount, and split_coefficient
 
@@ -176,29 +217,128 @@ class AlphaVantage(DataSourceInterface):
 
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
         df.set_index('timestamp', inplace=True)
+        df.symbol = symbol
         return df
 
-    def __get_daily_data(self, symbol):
-        """Gets all daily data as a panda data frame.
+    def get_daily_cached_file(self, symbol):
+        """Gets the latest un-expired cache file for daily data.
         
         Args:
             symbol (str): The symbol of the equity/stock.
         
-        Returns: A pandas data frame of all daily series data.
+        Returns:
+            str: File path if an un-expired cache file exists. Otherwise None.
         """
         series_type = "TIME_SERIES_DAILY_ADJUSTED"
-        if self.cache:
-            file_path = self.__cache_file_path(symbol, series_type)
-            if os.path.exists(file_path):
-                logger.debug("Reading existing data... %s" % file_path)
-                df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
-            else:
-                df = self.__request_data(symbol, series_type, 'full')
-                logger.debug("Saving data... %s" % file_path)
-                df.to_csv(file_path)
+        for i in range(self.daily_cache_expiration):
+            d = datetime.datetime.now() - datetime.timedelta(days=i)
+            file_path = self.__cache_file_path(symbol, series_type, d.strftime(self.date_fmt))
+            file_obj = StorageFile.init(file_path)
+            if file_obj.exists():
+                return file_obj
+        return None
+
+    def __intraday_cache_file_prefix(self, symbol):
+        """Generate file name prefix for intraday temporary cache file.
+        This file may contain intraday data of multiple days.
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns (str): prefix for the temporary file name.
+        """
+        series_type = "TIME_SERIES_INTRADAY"
+        prefix = "%s_%s_cached" % (symbol.upper(), series_type)
+        return prefix
+
+    def __intraday_cache_files(self, symbol):
+        """Gets all temporary cache data file for intraday data.
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns:
+            list: A list of StorageFile objects.
+        """
+        prefix = self.__intraday_cache_file_prefix(symbol)
+        cached_files = []
+        cache_folder = StorageFolder.init(self.cache)
+        for f in cache_folder.files:
+            if f.basename.startswith(prefix):
+                cached_files.append(f)
+        return cached_files
+
+    def __intraday_parse_time_from_filename(self, filename):
+        """Parses the time information from intraday cache filename.
+
+        Args:
+            filename (str): filename of a temporary intraday cache file.
+
+        Returns:
+            datetime or None: datetime of cache file.
+        """
+        time_str = filename.split(".")[0].split("cached", 1)[1]
+        try:
+            parsed_time = datetime.datetime.strptime(time_str, self.intraday_time_fmt)
+        except ValueError:
+            parsed_time = None
+        return parsed_time
+
+    def __intraday_valid_cache(self, symbol):
+        """Checks if the temporary cache data file for intraday data is expired.
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns:
+            cached_file object or None: StorageFile instance representing a valid cache file, or None.
+        """
+        cached_files = self.__intraday_cache_files(symbol)
+        if cached_files:
+            cached_files.sort(reverse=True, key=lambda x: x.basename)
+            cached_file = None
+            cached_time = None
+            # Remove the temporary cache files except the latest one.
+            for f in cached_files:
+                if cached_file is None:
+                    cached_time = self.__intraday_parse_time_from_filename(f.basename)
+                    if cached_time:
+                        cached_file = f
+                else:
+                    f.delete()
+            # Return the latest cache file if it is not expired.
+            if cached_time:
+                if cached_time + datetime.timedelta(minutes=self.intraday_cache_expiration) > datetime.datetime.now():
+                    return cached_file
+        return None
+
+    def __intraday_get_full_data(self, symbol):
+        """Gets the most recent intraday data (which may include data of multiple days.)
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns: A pandas data frame of intraday series data.
+
+        """
+        series_type = "TIME_SERIES_INTRADAY"
+        cached_file = self.__intraday_valid_cache(symbol)
+        if cached_file:
+            df = pd.read_csv(cached_file, index_col=0, parse_dates=['timestamp'])
         else:
-            # Request data from server if no cache
-            df = self.__request_data(symbol, series_type, 'full')
+            df = self.__request_data(symbol, series_type, 'full', interval="1min")
+            file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
+                        + datetime.datetime.now().strftime(self.intraday_time_fmt)
+            logger.debug("Saving intraday data...")
+            with StorageFile.init(file_path) as f:
+                df.to_csv(f)
+            groups = df.groupby(df['timestamp'].dt.normalize())
+            for name, group in groups:
+                date = str(name).split(" ")[0]
+                if not group[group.timestamp == date + " 16:00:00"].empty:
+                    date_file_path = self.__cache_file_path(symbol, series_type, date)
+                    with StorageFile.init(date_file_path) as f:
+                        group.reset_index(drop=True).to_csv(f)
         return df
 
     def get_intraday_series(self, symbol, date=None):
@@ -224,6 +364,7 @@ class AlphaVantage(DataSourceInterface):
                 date = (datetime.datetime.now() - datetime.timedelta(days=day_delta)).strftime(self.date_fmt)
             logger.debug("Getting data for %s" % date)
             # Get the next date as string for filtering purpose
+            # next_date is a string of date, which will be used to compare with data frame index.
             dt_date = datetime.datetime.strptime(date, self.date_fmt)
             dt_next = dt_date.date() + datetime.timedelta(days=1)
             next_date = dt_next.strftime(self.date_fmt)
@@ -231,9 +372,10 @@ class AlphaVantage(DataSourceInterface):
             if self.cache:
                 # Check if data has been cached.
                 file_path = self.__cache_file_path(symbol, series_type, date)
-                if os.path.exists(file_path):
+                file_obj = StorageFile.init(file_path)
+                if file_obj.exists():
                     logger.debug("Reading existing data... %s" % file_path)
-                    df = pd.read_csv(file_path, index_col=0, parse_dates=['timestamp'])
+                    df = pd.read_csv(file_obj, index_col=0, parse_dates=['timestamp'])
                 else:
                     df = self.__intraday_get_full_data(symbol)
                     df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
@@ -246,106 +388,5 @@ class AlphaVantage(DataSourceInterface):
         
         if df is not None:
             df.set_index('timestamp', inplace=True)
-
+        df.symbol = symbol
         return df
-
-    def __intraday_get_full_data(self, symbol):
-        """Gets the most recent intraday data (which may include data of multiple days.)
-        
-        Args:
-            symbol (str): The symbol of the equity/stock.
-        
-        Returns: A pandas data frame of intraday series data.
-        
-        """
-        series_type = "TIME_SERIES_INTRADAY"
-        cached_file = self.__intraday_valid_cache(symbol)
-        if cached_file:
-            df = pd.read_csv(cached_file, index_col=0, parse_dates=['timestamp'])
-        else:
-            df = self.__request_data(symbol, series_type, 'full', interval="1min")
-            file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
-                + datetime.datetime.now().strftime(self.intraday_time_fmt)
-            logger.debug("Saving intraday data...")
-            df.to_csv(file_path)
-            groups = df.groupby(df['timestamp'].dt.normalize())
-            for name, group in groups:
-                date = str(name).split(" ")[0]
-                if not group[group.timestamp == date + " 16:00:00"].empty:
-                    date_file_path = self.__cache_file_path(symbol, series_type, date)
-                    group.reset_index(drop=True).to_csv(date_file_path)
-        return df
-
-    def __intraday_valid_cache(self, symbol):
-        """Checks if the temporary cache data file for intraday data is expired.
-        
-        Args:
-            symbol (str): The symbol of the equity/stock.
-        
-        Returns:
-            str or None: file path of a valid cache file, or None.
-        """
-        cached_files = self.__intraday_cache_files(symbol)
-        if cached_files:
-            cached_files.sort(reverse=True)
-            cached_file = None
-            cached_time = None
-            # Remove the temporary cache files except the latest one.
-            for f in cached_files:
-                if cached_file is None:
-                    cached_time = self.__intraday_parse_time_from_filename(f)
-                    if cached_time:
-                        cached_file = f
-                else:
-                    os.remove(f)
-            # Return the latest cache file if it is not expired.
-            if cached_time:
-                if cached_time + datetime.timedelta(minutes=self.intraday_cache_expiration) > datetime.datetime.now():
-                    return cached_file
-        return None
-
-    def __intraday_cache_files(self, symbol):
-        """Gets all temporary cache data file for intraday data.
-        
-        Args:
-            symbol (str): The symbol of the equity/stock.
-        
-        Returns:
-            list: A list of file paths.
-        """
-        prefix = self.__intraday_cache_file_prefix(symbol)
-        cached_files = []
-        for f in os.listdir(self.cache):
-            file_path = os.path.join(self.cache, f)
-            if f.startswith(prefix) and os.path.isfile(file_path):
-                cached_files.append(file_path)
-        return cached_files
-
-    def __intraday_parse_time_from_filename(self, filename):
-        """Parses the time information from intraday cache filename.
-        
-        Args:
-            filename (str): filename of a temporary intraday cache file.
-        
-        Returns:
-            datetime or None: datetime of cache file.
-        """
-        time_str = filename.split(".")[0].split("cached", 1)[1]
-        try:
-            parsed_time = datetime.datetime.strptime(time_str, self.intraday_time_fmt)
-        except ValueError:
-            parsed_time = None
-        return parsed_time
-
-    def __intraday_cache_file_prefix(self, symbol):
-        """Generate file name prefix for intraday temporary cache file.
-        This file may contain intraday data of multiple days.
-        
-        Args:
-            symbol (str): The symbol of the equity/stock.
-        
-        Returns (str): prefix for the temporary file name.
-        """
-        series_type = "TIME_SERIES_INTRADAY"
-        prefix = "%s_%s_cached" % (symbol.upper(), series_type)
-        return prefix

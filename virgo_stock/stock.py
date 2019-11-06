@@ -1,7 +1,6 @@
 import datetime
 import pandas as pd
 from collections import OrderedDict
-from virgo_stock.source import DataSourceInterface
 
 
 class DataPoint:
@@ -101,7 +100,8 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+        Returns:
+            A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
 
         """
 
@@ -119,8 +119,9 @@ class Stock:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
-            The timestamp of each returned data point (data frame row) is the first timestamp of each aggregation period.
+        Returns:
+            A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+            The timestamp of returned data point (data frame row) is the first timestamp of the aggregation period.
 
         """
         attributes = ["open", "high", "low", "close", "volume"]
@@ -172,6 +173,7 @@ class Stock:
             )
         )
         aggregated_df.set_index("timestamp", inplace=True)
+        aggregated_df.symbol = self.symbol
         return aggregated_df
 
     def weekly_series(self, start=None, end=None):

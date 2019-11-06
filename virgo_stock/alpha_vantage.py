@@ -2,11 +2,13 @@ import requests
 import time
 import datetime
 import io
+import logging
 import pandas as pd
 from collections import deque
 from requests.exceptions import RequestException
 from Aries.tasks import FunctionTask
 from Aries.web import WebAPI
+logger = logging.getLogger(__name__)
 
 
 class AlphaVantageAPI(WebAPI):
@@ -122,13 +124,22 @@ class AlphaVantageAPI(WebAPI):
         # Check if the request is over rate limit
         try:
             json_data = response.json()
-            if len(json_data) == 1 and json_data.get("Note") is not None:
-                raise RequestException(
-                    json_data.get("Note"),
-                    response=response
-                )
         except ValueError:
-            pass
+            # Return if the data is not JSON.
+            # AlphaVantage send errors in JSON
+            return
+
+        if len(json_data) == 1:
+            val = next(iter(json_data.values()))
+            if isinstance(val, str):
+                if "Invalid API call" in val:
+                    logger.debug(val)
+                    raise ValueError(str(json_data))
+                else:
+                    raise RequestException(
+                        str(json_data),
+                        response=response,
+                    )
 
     def __clean_history(self):
         """Removes the history of longer than 1 minute ago.
@@ -152,6 +163,13 @@ class AlphaVantageAPI(WebAPI):
         
         Returns: A Response Object
         """
+        # Replace "." with "-", and remove "^".
+        # otherwise there will be an error when getting data from AlphaVantage.
+        logger.debug("Getting AlphaVantage Data...%s" % kwargs)
+        symbol = kwargs.get("symbol")
+        if symbol:
+            kwargs["symbol"] = symbol.replace(".", "-").replace("^", "")
+
         # Build request URL
         url = self.build_url("", **kwargs)
 
@@ -185,9 +203,11 @@ class AlphaVantageAPI(WebAPI):
         """
         response = self.__get(**kwargs)
         # Additional error checking for JSON
+        json_data = None
         try:
             json_data = response.json()
         except ValueError:
+            logger.debug(response.content)
             raise RequestException(
                 "The response does not contain valid JSON.",
                 response=response
@@ -261,9 +281,9 @@ class AlphaVantageAPI(WebAPI):
                 parse_dates=["timestamp"],
                 infer_datetime_format=True
             )
-        except Exception:
+        except:
+            buffer.seek(0)
             df = pd.read_csv(
-                buffer, 
-                infer_datetime_format=True
+                buffer
             )
         return df
