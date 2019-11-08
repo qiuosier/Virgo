@@ -5,6 +5,7 @@ from . import views
 app_name = 'virgo'
 urlpatterns = [
     url(r'^$', views.index, name='index'),
-    url(r'^(?P<symbol>[A-Za-z0-9\-]+)/$', views.candle_stick, name='candle_stick'),
-    url(r'^(?P<symbol>[A-Za-z0-9\-]+)/(?P<start>[0-9]+-[0-9]+-[0-9])/$', views.candle_stick, name='candle_stick'),
+    url(r'^candle/(?P<symbol>[\w\-]+)/$', views.candle_stick, name='candle_stick'),
+    url(r'^candle/(?P<symbol>[\w\-]+)/(?P<start>[0-9]+-[0-9]+-[0-9])/$', views.candle_stick, name='candle_stick'),
+    url(r'^update/sp500/$', views.update_sp500, name='update_sp500')
 ]

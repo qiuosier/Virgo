@@ -1,12 +1,15 @@
 import os
 import logging
+import json
 from functools import wraps
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render
+from Aries.storage import StorageFile
 from .virgo_stock.source import AlphaVantage
 from .virgo_stock.plotly import Candlestick
+from .virgo_stock import sp500
 logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY")
 
@@ -42,3 +45,15 @@ def candle_stick(request, symbol, start=None, end=None):
         "title": str(symbol).upper(),
         "chart": daily_chart.to_html()
     })
+
+
+def update_sp500(request):
+    symbols = sp500.download_symbols()
+    sp500_path = os.environ.get("SP500_PATH")
+    with StorageFile.init(sp500_path) as f:
+        json.dump({"sp500:": symbols}, f)
+    return HttpResponse("%s symbols in S&P500" % len(symbols))
+
+
+def update_next(request):
+    pass
