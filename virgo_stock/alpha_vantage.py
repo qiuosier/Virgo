@@ -182,7 +182,7 @@ class AlphaVantageAPI(WebAPI):
             item = history[-limit]
             wait_time = item.get("time") + datetime.timedelta(seconds=61) - datetime.datetime.now()
             wait_seconds = wait_time.total_seconds()
-            print("Wait %s seconds..." % wait_seconds)
+            logger.debug("Wait %s seconds..." % wait_seconds)
             time.sleep(wait_seconds)
         
         # Add this request to history
@@ -203,7 +203,6 @@ class AlphaVantageAPI(WebAPI):
         """
         response = self.__get(**kwargs)
         # Additional error checking for JSON
-        json_data = None
         try:
             json_data = response.json()
         except ValueError:

@@ -182,6 +182,7 @@ class AlphaVantage(DataSourceInterface):
     def __get_all_daily_cache(self, symbol):
         symbol = str(symbol).replace(".", "-")
         prefix = "%s_%s_" % (symbol.upper(), self.daily_series_type)
+        logger.debug("Getting cache files with prefix: %s" % prefix)
         file_objs = StorageFolder.init(self.cache).filter_files(prefix)
         return file_objs
 
@@ -189,8 +190,7 @@ class AlphaVantage(DataSourceInterface):
         file_path = self.__cache_file_path(symbol, series_type)
         logger.debug("Saving %s rows to... %s" % (len(df), file_path))
         storage_file = StorageFile.init(file_path)
-        with storage_file as f:
-            f.delete()
+        with storage_file('w') as f:
             df.to_csv(f)
         return file_path
 
@@ -236,6 +236,9 @@ class AlphaVantage(DataSourceInterface):
                 # Each AlphaVantage response contains only about 5000 previous data points.
                 # Older data are not in the new responses.
                 files = self.__get_all_daily_cache(symbol)
+                if not files:
+                    logger.debug("Data files not found in %s" % self.cache)
+                    return df
                 logger.debug("Merging %s files" % len(files))
                 df = self.__merge_daily_cache(files)
                 file_path = self.__save_data_frame(df, symbol, series_type)
@@ -378,8 +381,7 @@ class AlphaVantage(DataSourceInterface):
             file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
                         + datetime.datetime.now().strftime(self.intraday_time_fmt)
             logger.debug("Saving intraday data...")
-            with StorageFile.init(file_path) as f:
-                f.delete()
+            with StorageFile.init(file_path, 'w') as f:
                 df.to_csv(f)
             groups = df.groupby(df['timestamp'].dt.normalize())
             for name, group in groups:
@@ -387,8 +389,7 @@ class AlphaVantage(DataSourceInterface):
                 # TODO: Stock may not close at 16:00
                 if not group[group.timestamp == date + " 16:00:00"].empty:
                     date_file_path = self.__cache_file_path(symbol, series_type, date)
-                    with StorageFile.init(date_file_path) as f:
-                        f.delete()
+                    with StorageFile.init(date_file_path, 'w') as f:
                         group.reset_index(drop=True).to_csv(f)
         return df
 

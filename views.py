@@ -55,8 +55,7 @@ def update_sp500(request):
     The JSON file will contain a dictionary of one key (sp500) and a list of strings as value.
     """
     symbols = sp500.download_symbols()
-    with StorageFile.init(SP500_FILE) as f:
-        f.delete()
+    with StorageFile.init(SP500_FILE, 'w') as f:
         json.dump({"sp500": symbols}, f)
     return HttpResponse("%s symbols in S&P500" % len(symbols))
 
@@ -71,7 +70,7 @@ def update_symbols(request):
         "INX",
         "IXIC"
     ])
-    with StorageFile.init(SYMBOLS_FILE) as f:
+    with StorageFile.init(SYMBOLS_FILE, 'w') as f:
         json.dump({"symbols": symbols}, f)
     return HttpResponse("%s symbols saved to %s" % (len(symbols), SYMBOLS_FILE))
 

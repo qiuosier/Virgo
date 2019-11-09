@@ -49,12 +49,15 @@ class TestDataSource(TestWithAlphaVantage):
         data_source = AlphaVantage(self.api_key, cache_folder=self.cache)
         df1 = data_source.get_daily_series("AAPL")
         self.assert_data_frame(df1)
-        self.assertEqual(len(LocalFolder(self.cache).file_names), 1)
+        filenames = LocalFolder(self.cache).file_names
+        self.assertEqual(len(filenames), 1, "Files: %s" % filenames)
         # Get data again, cached data should be returned.
         df2 = data_source.get_daily_series("AAPL")
         self.assert_data_frame(df1)
         self.assertEqual(len(df1), len(df2))
-        self.assertEqual(len(LocalFolder(self.cache).file_names), 1)
+        filenames = LocalFolder(self.cache).file_names
+        self.assertEqual(len(filenames), 1, "Files: %s" % filenames)
+
 
 class TestAlphaVantageAPI(TestWithAlphaVantage):
     def test_make_7_api_requests(self):
