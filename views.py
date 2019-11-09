@@ -64,6 +64,7 @@ def update_sp500(request):
 def update_symbols(request):
     """Updates the list of symbols for requesting data using update_next()
     """
+    update_sp500(request)
     symbols = json.load(StorageFile.init(SP500_FILE)).get("sp500")
     symbols.extend([
         "DJI",
