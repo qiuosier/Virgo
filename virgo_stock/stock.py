@@ -107,7 +107,7 @@ class Stock:
 
         return self.data_source.get_daily_series(self.symbol, start, end)
 
-    def intraday_series(self, date):
+    def intraday_series(self, date=None):
         return self.data_source.get_intraday_series(self.symbol, date)
 
     def __aggregate_series(self, trans_func, start=None, end=None):

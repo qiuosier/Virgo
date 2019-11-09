@@ -92,6 +92,7 @@ class AlphaVantage(DataSourceInterface):
 
     intraday_time_fmt = "_%Y-%m-%d_%H%M"
     date_fmt = "%Y-%m-%d"
+    daily_series_type = "TIME_SERIES_DAILY_ADJUSTED"
 
     def __init__(self, api_key, cache_folder=None):
         """Initialize the AlphaVantage Data Source
@@ -161,6 +162,57 @@ class AlphaVantage(DataSourceInterface):
         file_path = os.path.join(self.cache, filename)
         return file_path
 
+    def __get_valid_daily_cache(self, symbol):
+        """Gets the latest un-expired cache file for daily data.
+
+        Args:
+            symbol (str): The symbol of the equity/stock.
+
+        Returns:
+            str: File path if an un-expired cache file exists. Otherwise None.
+        """
+        for i in range(self.daily_cache_expiration):
+            d = datetime.datetime.now() - datetime.timedelta(days=i)
+            file_path = self.__cache_file_path(symbol, self.daily_series_type, d.strftime(self.date_fmt))
+            file_obj = StorageFile.init(file_path)
+            if file_obj.exists():
+                return file_obj
+        return None
+
+    def __get_all_daily_cache(self, symbol):
+        symbol = str(symbol).replace(".", "-")
+        prefix = "%s_%s_" % (symbol.upper(), self.daily_series_type)
+        file_objs = StorageFolder.init(self.cache).filter_files(prefix)
+        return file_objs
+
+    def __save_data_frame(self, df, symbol, series_type):
+        file_path = self.__cache_file_path(symbol, series_type)
+        logger.debug("Saving %s rows to... %s" % (len(df), file_path))
+        storage_file = StorageFile.init(file_path)
+        with storage_file as f:
+            f.delete()
+            df.to_csv(f)
+        return file_path
+
+    def __merge_daily_cache(self, file_objs):
+        # Read data from all files into a dictionary.
+        # This will eliminate duplicates.
+        data = {}
+        for f in file_objs:
+            df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
+            for index, row in df.iterrows():
+                key = row['timestamp']
+                if key in data:
+                    continue
+                data[key] = row
+        # Sort the keys in data
+        keys = list(data.keys())
+        keys.sort(reverse=True)
+        rows = [data[key] for key in keys]
+        merged_df = pd.DataFrame.from_records(rows)
+        merged_df.reset_index()
+        return merged_df
+
     def __get_daily_data(self, symbol):
         """Gets all daily data as a panda data frame.
 
@@ -169,18 +221,31 @@ class AlphaVantage(DataSourceInterface):
 
         Returns: A pandas data frame of all daily series data.
         """
-        series_type = "TIME_SERIES_DAILY_ADJUSTED"
+        series_type = self.daily_series_type
         if self.cache:
-            file_obj = self.get_daily_cached_file(symbol)
+            file_obj = self.__get_valid_daily_cache(symbol)
             if file_obj:
                 logger.debug("Reading existing data... %s" % file_obj)
                 df = pd.read_csv(file_obj, index_col=0, parse_dates=['timestamp'])
             else:
-                file_path = self.__cache_file_path(symbol, series_type)
+
                 df = self.__request_data(symbol, series_type, 'full')
-                logger.debug("Saving data... %s" % file_path)
-                with StorageFile.init(file_path) as f:
-                    df.to_csv(f)
+                self.__save_data_frame(df, symbol, series_type)
+
+                # Merge existing daily data with the newly requested data
+                # Each AlphaVantage response contains only about 5000 previous data points.
+                # Older data are not in the new responses.
+                files = self.__get_all_daily_cache(symbol)
+                logger.debug("Merging %s files" % len(files))
+                df = self.__merge_daily_cache(files)
+                file_path = self.__save_data_frame(df, symbol, series_type)
+                # Delete old cache files.
+                files.sort(key=lambda x: x.name, reverse=True)
+                for f in files[1:]:
+                    if f.basename != os.path.basename(file_path):
+                        logger.debug("Deleting %s..." % f.uri)
+                        f.delete()
+
         else:
             # Request data from server if no cache
             df = self.__request_data(symbol, series_type, 'full')
@@ -207,36 +272,19 @@ class AlphaVantage(DataSourceInterface):
         Returns: A pandas data frame of time series data.
 
         """
-        # Sets the default values for start and end.
+        # Set the default values for start and end.
         if start is None:
-            start = "1800-01-01"
+            start = "1980-01-01"
         if end is None:
             end = datetime.datetime.now().strftime(self.date_fmt)
-
+        # Get the full daily data
         df = self.__get_daily_data(symbol)
-
+        # Filter the daily data
         df = df[(df['timestamp'] >= start) & (df['timestamp'] <= end)]
+        # Reset index
         df.set_index('timestamp', inplace=True)
         df.symbol = symbol
         return df
-
-    def get_daily_cached_file(self, symbol):
-        """Gets the latest un-expired cache file for daily data.
-        
-        Args:
-            symbol (str): The symbol of the equity/stock.
-        
-        Returns:
-            str: File path if an un-expired cache file exists. Otherwise None.
-        """
-        series_type = "TIME_SERIES_DAILY_ADJUSTED"
-        for i in range(self.daily_cache_expiration):
-            d = datetime.datetime.now() - datetime.timedelta(days=i)
-            file_path = self.__cache_file_path(symbol, series_type, d.strftime(self.date_fmt))
-            file_obj = StorageFile.init(file_path)
-            if file_obj.exists():
-                return file_obj
-        return None
 
     def __intraday_cache_file_prefix(self, symbol):
         """Generate file name prefix for intraday temporary cache file.
@@ -331,13 +379,16 @@ class AlphaVantage(DataSourceInterface):
                         + datetime.datetime.now().strftime(self.intraday_time_fmt)
             logger.debug("Saving intraday data...")
             with StorageFile.init(file_path) as f:
+                f.delete()
                 df.to_csv(f)
             groups = df.groupby(df['timestamp'].dt.normalize())
             for name, group in groups:
                 date = str(name).split(" ")[0]
+                # TODO: Stock may not close at 16:00
                 if not group[group.timestamp == date + " 16:00:00"].empty:
                     date_file_path = self.__cache_file_path(symbol, series_type, date)
                     with StorageFile.init(date_file_path) as f:
+                        f.delete()
                         group.reset_index(drop=True).to_csv(f)
         return df
 
@@ -348,7 +399,8 @@ class AlphaVantage(DataSourceInterface):
             symbol (str): The name of the equity/stock.
             date (str, optional): Date, e.g. 2017-02-12. Defaults to None.
 
-        Returns: A pandas data frame of intraday series data.
+        Returns: A pandas data frame of intraday series data for the specific date.
+            If date is None, the data of the last trading day will be returned.
             This function will return None,
             if date is None and there is no data available in the last 100 days.
 
@@ -358,6 +410,7 @@ class AlphaVantage(DataSourceInterface):
         requested_date = date
         day_delta = 0
         df = None
+        # When date is specified, empty data frame will be return if there is no data for the specific day.
         # When date is not specified, try to get data of the previous day if there is no data today
         while df is None or (requested_date is None and df.empty and day_delta < 100):
             if requested_date is None:

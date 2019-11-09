@@ -1,14 +1,20 @@
 import os
 import logging
+import json
+import datetime
 from functools import wraps
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render
+from Aries.storage import StorageFile
 from .virgo_stock.source import AlphaVantage
 from .virgo_stock.plotly import Candlestick
+from .virgo_stock import sp500
 logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY")
+SP500_FILE = os.environ.get("SP500_PATH")
+SYMBOLS_FILE = os.environ.get("SYMBOLS_PATH")
 
 
 def authentication_required(function=None):
@@ -42,3 +48,52 @@ def candle_stick(request, symbol, start=None, end=None):
         "title": str(symbol).upper(),
         "chart": daily_chart.to_html()
     })
+
+
+def update_sp500(request):
+    """Updates the S&P500 symbols and store them into a JSON file.
+    The JSON file will contain a dictionary of one key (sp500) and a list of strings as value.
+    """
+    symbols = sp500.download_symbols()
+    with StorageFile.init(SP500_FILE) as f:
+        f.delete()
+        json.dump({"sp500": symbols}, f)
+    return HttpResponse("%s symbols in S&P500" % len(symbols))
+
+
+def update_symbols(request):
+    """Updates the list of symbols for requesting data using update_next()
+    """
+    update_sp500(request)
+    symbols = json.load(StorageFile.init(SP500_FILE)).get("sp500")
+    symbols.extend([
+        "DJI",
+        "INX",
+        "IXIC"
+    ])
+    with StorageFile.init(SYMBOLS_FILE) as f:
+        json.dump({"symbols": symbols}, f)
+    return HttpResponse("%s symbols saved to %s" % (len(symbols), SYMBOLS_FILE))
+
+
+def update_next(request):
+    """Requests daily and intraday data for a symbol in the symbol list.
+    The index of the symbol in symbol list is calculated from the number of minutes since EPOCH.
+    A different symbol will be used in this function every 10 minutes.
+    This function is designed to be triggered every 10 minutes.
+    Assuming updating data of a symbol every 10 minute.
+    There will be 144 updates per day, 1008 updates per week.
+
+    """
+    symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
+    idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
+    logger.debug("Index: %s" % idx)
+    symbol = symbols[idx]
+    logger.debug("Updating %s" % symbol)
+    data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
+    stock = data_source.get_stock(symbol)
+    logger.debug("Updating daily data...")
+    stock.daily_series()
+    logger.debug("Updating intraday data...")
+    stock.intraday_series()
+    return HttpResponse("Data of %s updated." % symbol)
