@@ -190,6 +190,7 @@ class AlphaVantage(DataSourceInterface):
         logger.debug("Saving %s rows to... %s" % (len(df), file_path))
         storage_file = StorageFile.init(file_path)
         with storage_file as f:
+            f.delete()
             df.to_csv(f)
         return file_path
 
@@ -378,13 +379,16 @@ class AlphaVantage(DataSourceInterface):
                         + datetime.datetime.now().strftime(self.intraday_time_fmt)
             logger.debug("Saving intraday data...")
             with StorageFile.init(file_path) as f:
+                f.delete()
                 df.to_csv(f)
             groups = df.groupby(df['timestamp'].dt.normalize())
             for name, group in groups:
                 date = str(name).split(" ")[0]
+                # TODO: Stock may not close at 16:00
                 if not group[group.timestamp == date + " 16:00:00"].empty:
                     date_file_path = self.__cache_file_path(symbol, series_type, date)
                     with StorageFile.init(date_file_path) as f:
+                        f.delete()
                         group.reset_index(drop=True).to_csv(f)
         return df
 
