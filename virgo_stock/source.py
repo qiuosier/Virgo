@@ -376,21 +376,25 @@ class AlphaVantage(DataSourceInterface):
         cached_file = self.__intraday_valid_cache(symbol)
         if cached_file:
             df = pd.read_csv(cached_file, index_col=0, parse_dates=['timestamp'])
-        else:
-            df = self.__request_data(symbol, series_type, 'full', interval="1min")
-            file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
-                        + datetime.datetime.now().strftime(self.intraday_time_fmt)
-            logger.debug("Saving intraday data...")
-            with StorageFile.init(file_path, 'w') as f:
-                df.to_csv(f)
-            groups = df.groupby(df['timestamp'].dt.normalize())
-            for name, group in groups:
-                date = str(name).split(" ")[0]
-                # TODO: Stock may not close at 16:00
-                if not group[group.timestamp == date + " 16:00:00"].empty:
-                    date_file_path = self.__cache_file_path(symbol, series_type, date)
-                    with StorageFile.init(date_file_path, 'w') as f:
-                        group.reset_index(drop=True).to_csv(f)
+            return df
+        df = self.__request_data(symbol, series_type, 'full', interval="1min")
+        file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
+            + datetime.datetime.now().strftime(self.intraday_time_fmt)
+        logger.debug("Saving intraday data...")
+        with StorageFile.init(file_path, 'w') as f:
+            df.to_csv(f)
+        # Group data by date
+        groups = df.groupby(df['timestamp'].dt.normalize())
+        # Get the latest date in the data frame
+        dates = [str(name).split(" ")[0] for name, _ in groups]
+        latest = max(dates)
+        for name, group in groups:
+            date = str(name).split(" ")[0]
+            # The data for a date is complete if there is data at 1600 or the date is not the latest one
+            if not group[group.timestamp == date + " 16:00:00"].empty or date < latest:
+                date_file_path = self.__cache_file_path(symbol, series_type, date)
+                with StorageFile.init(date_file_path, 'w') as f:
+                    group.reset_index(drop=True).to_csv(f)
         return df
 
     def get_intraday_series(self, symbol, date=None):
