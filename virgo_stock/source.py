@@ -187,6 +187,9 @@ class AlphaVantage(DataSourceInterface):
         return file_objs
 
     def __save_data_frame(self, df, symbol, series_type):
+        if df.empty:
+            logger.info("Data frame is empty.")
+            return None
         file_path = self.__cache_file_path(symbol, series_type)
         logger.debug("Saving %s rows to... %s" % (len(df), file_path))
         storage_file = StorageFile.init(file_path)
@@ -199,7 +202,11 @@ class AlphaVantage(DataSourceInterface):
         # This will eliminate duplicates.
         data = {}
         for f in file_objs:
-            df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
+            try:
+                df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
+            except Exception as ex:
+                logger.error("%s: %s" % (type(ex), str(ex)))
+                continue
             for index, row in df.iterrows():
                 key = row['timestamp']
                 if key in data:

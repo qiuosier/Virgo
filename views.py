@@ -68,7 +68,6 @@ def update_symbols(request):
     symbols.extend([
         "DJI",
         "INX",
-        "IXIC"
     ])
     with StorageFile.init(SYMBOLS_FILE, 'w') as f:
         json.dump({"symbols": symbols}, f)
