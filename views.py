@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render
 from Aries.storage import StorageFile
+from Aries.tasks import FunctionTask
 from .virgo_stock.source import AlphaVantage
 from .virgo_stock.plotly import Candlestick
 from .virgo_stock import sp500
@@ -74,6 +75,16 @@ def update_symbols(request):
     return HttpResponse("%s symbols saved to %s" % (len(symbols), SYMBOLS_FILE))
 
 
+def update_stock(symbol):
+    logger.debug("Updating %s" % symbol)
+    data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
+    stock = data_source.get_stock(symbol)
+    logger.debug("Updating daily data...")
+    stock.daily_series()
+    logger.debug("Updating intraday data...")
+    stock.intraday_series()
+
+
 def update_next(request):
     """Requests daily and intraday data for a symbol in the symbol list.
     The index of the symbol in symbol list is calculated from the number of minutes since EPOCH.
@@ -87,11 +98,5 @@ def update_next(request):
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
-    logger.debug("Updating %s" % symbol)
-    data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
-    stock = data_source.get_stock(symbol)
-    logger.debug("Updating daily data...")
-    stock.daily_series()
-    logger.debug("Updating intraday data...")
-    stock.intraday_series()
-    return HttpResponse("Data of %s updated." % symbol)
+    FunctionTask(update_stock, symbol).run_async()
+    return HttpResponse("Updating %s" % symbol)
