@@ -335,10 +335,10 @@ class AlphaVantage(DataSourceInterface):
         Returns:
             datetime or None: datetime of cache file.
         """
-        time_str = filename.split(".")[0].split("cached", 1)[1]
         try:
+            time_str = filename.split(".")[0].split("cached", 1)[1]
             parsed_time = datetime.datetime.strptime(time_str, self.intraday_time_fmt)
-        except ValueError:
+        except (ValueError, IndexError):
             parsed_time = None
         return parsed_time
 
@@ -358,11 +358,14 @@ class AlphaVantage(DataSourceInterface):
             cached_time = None
             # Remove the temporary cache files except the latest one.
             for f in cached_files:
+                # The first cached_file will be the latest one
                 if cached_file is None:
+                    logger.debug("Keeping cached file: %s" % f.uri)
                     cached_time = self.__intraday_parse_time_from_filename(f.basename)
                     if cached_time:
                         cached_file = f
                 else:
+                    logger.debug("Deleting cached file: %s" % f.uri)
                     f.delete()
             # Return the latest cache file if it is not expired.
             if cached_time:
