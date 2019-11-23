@@ -13,7 +13,7 @@ steps:
   args:
   - '400'
   - '/root/.ssh/cloud_build'
-    volumes:
+  volumes:
   - name: 'ssh'
     path: /root/.ssh
 # Copy known_hosts
