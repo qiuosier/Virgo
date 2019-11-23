@@ -5,8 +5,15 @@ steps:
   - cp
   - 'gs://qqin.page/Keys/cloud_build'
   - '/root/.ssh/cloud_build'
-  - '&& chmod 400 /root/.ssh/cloud_build'
   volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'chmod'
+  args:
+  - 400
+  - '/root/.ssh/cloud_build'
+    volumes:
   - name: 'ssh'
     path: /root/.ssh
 # Copy known_hosts
