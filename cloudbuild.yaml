@@ -18,9 +18,7 @@ steps:
   - name: 'ssh'
     path: /root/.ssh
 - name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'bash'
-  args:
-  - ls
+  entrypoint: 'ls'
 # Clone the repository
 - name: 'gcr.io/cloud-builders/git'
   args:
