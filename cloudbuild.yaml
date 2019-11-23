@@ -1,6 +1,6 @@
 # Decrypt the file containing the key
 steps:
-- name: 'gcr.io/cloud-builders/gsutil',
+- name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
   - 'gs://qqin.page/Keys/cloud_build.enc'
