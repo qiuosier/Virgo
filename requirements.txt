@@ -1,7 +1,9 @@
 openpyxl==2.4.8
+xlrd>-0.9.0
+google-cloud-storage>=1.16
+lxml
 plotly~=3.5
 requests
 numpy
 scipy
 pandas
-xlrd>-0.9.0
