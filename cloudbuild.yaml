@@ -32,8 +32,7 @@ steps:
   - name: 'ssh'
     path: /root/.ssh
 # Copy the files to server
-- name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'bash'
+- name: 'gcr.io/cloud-builders/gsutil'
   args:
   - 'rsync'
   - -r
