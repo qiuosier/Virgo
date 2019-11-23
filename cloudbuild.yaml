@@ -1,38 +1,16 @@
 steps:
+# Copy the ssh key
 - name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
   - 'gs://qqin.page/Keys/cloud_build'
   - 'cloud_build'
-# # Decrypt the file containing the key
-# - name: 'gcr.io/cloud-builders/gcloud'
-#   args:
-#   - kms
-#   - decrypt
-#   - --ciphertext-file=cloud_build.enc
-#   - --plaintext-file=/root/.ssh/cloud_build
-#   - --location=global
-#   - --keyring=cloud-build-keyring
-#   - --key=cloud-build-key
-#   volumes:
-#   - name: 'ssh'
-#     path: /root/.ssh
-# Set up git with key and domain
-- name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'bash'
+# Copy known_hosts
+- name: 'gcr.io/cloud-builders/gsutil'
   args:
-  - '-c'
-  - |
-    chmod 600 /root/.ssh/cloud_build
-    cat <<EOF >/root/.ssh/config
-    Hostname 35.196.143.123
-    IdentityFile /root/.ssh/cloud_build
-    EOF
-    mv known_hosts /root/.ssh/known_hosts
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-
+  - cp
+  - 'gs://qqin.page/Keys/known_hosts'
+  - 'known_hosts'
 # Clone the repository
 - name: 'gcr.io/cloud-builders/git'
   args:
@@ -43,9 +21,8 @@ steps:
   volumes:
   - name: 'ssh'
     path: /root/.ssh
-
-  # Copy the files to server
-  - name: 'gcr.io/cloud-builders/git'
+# Copy the files to server
+- name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
   args:
   - 'rsync'
