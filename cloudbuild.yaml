@@ -4,13 +4,23 @@ steps:
   args:
   - cp
   - 'gs://qqin.page/Keys/cloud_build'
-  - 'cloud_build'
+  - '/root/.ssh/cloud_build'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
 # Copy known_hosts
 - name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
   - 'gs://qqin.page/Keys/known_hosts'
-  - 'known_hosts'
+  - '/root/.ssh/known_hosts'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - ls
 # Clone the repository
 - name: 'gcr.io/cloud-builders/git'
   args:
