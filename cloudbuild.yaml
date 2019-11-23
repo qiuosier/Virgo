@@ -35,6 +35,8 @@ steps:
 - name: 'eeacms/rsync'
   args:
   - 'rsync'
+  - -e
+  - 'ssh -i /root/.ssh/cloud_build'
   - -r
   - .
   - service-403422450929@35.196.143.123:/var/virgo --delete
