@@ -1,23 +1,22 @@
-# Decrypt the file containing the key
 steps:
 - name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
-  - 'gs://qqin.page/Keys/cloud_build.enc'
-  - 'cloud_build.enc'
-- name: 'gcr.io/cloud-builders/gcloud'
-  args:
-  - kms
-  - decrypt
-  - --ciphertext-file=cloud_build.enc
-  - --plaintext-file=/root/.ssh/cloud_build
-  - --location=global
-  - --keyring=cloud-build-keyring
-  - --key=cloud-build-key
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-
+  - 'gs://qqin.page/Keys/cloud_build'
+  - 'cloud_build'
+# # Decrypt the file containing the key
+# - name: 'gcr.io/cloud-builders/gcloud'
+#   args:
+#   - kms
+#   - decrypt
+#   - --ciphertext-file=cloud_build.enc
+#   - --plaintext-file=/root/.ssh/cloud_build
+#   - --location=global
+#   - --keyring=cloud-build-keyring
+#   - --key=cloud-build-key
+#   volumes:
+#   - name: 'ssh'
+#     path: /root/.ssh
 # Set up git with key and domain
 - name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
