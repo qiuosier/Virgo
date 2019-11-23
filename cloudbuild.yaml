@@ -32,7 +32,7 @@ steps:
   - name: 'ssh'
     path: /root/.ssh
 # Copy the files to server
-- name: 'gcr.io/cloud-builders/gsutil'
+- name: 'eeacms/rsync'
   args:
   - 'rsync'
   - -r
