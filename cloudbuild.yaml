@@ -48,7 +48,6 @@ steps:
   # Copy the files to server
   - name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
-  'rsync -r --exclude-from=$WORKSPACE/.gitignore $WORKSPACE/ jenkins@104.196.107.63:/mnt/disks/image-creator/who_demo --delete'
   args:
   - 'rsync'
   - -r
