@@ -1,5 +1,7 @@
 steps:
-# Copy the ssh key
+- name: gcr.io/cloud-builders/git
+  args: ['fetch', '--unshallow']
+  # Copy the ssh key
 - name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
