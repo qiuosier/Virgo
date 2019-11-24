@@ -45,13 +45,18 @@ steps:
   volumes:
   - name: 'ssh'
     path: /root/.ssh
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'cat'
+  args:
+  - deploy.sh
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'ssh'
   args:
   - -i
   - /root/.ssh/cloud_build
   - service-403422450929@35.196.143.123
-  - 'bash < ( cat deploy.sh )'
+  - 'bash -s' 
+  - '< deploy.sh'
   volumes:
   - name: 'ssh'
     path: /root/.ssh
