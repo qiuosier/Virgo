@@ -31,5 +31,5 @@ steps:
   - ssh
   - service-403422450929@aries-micro
   - --zone=us-east1-b
-  - --ssh-key-file cloud_build
+  - --ssh-key-file=cloud_build
   - --command='bash -s' < deploy.sh
