@@ -30,4 +30,5 @@ steps:
   - compute
   - ssh
   - aries-micro
+  - --zone=us-east1-b
   - --command='bash -s' < deploy.sh
