@@ -4,10 +4,10 @@ steps:
   args:
   - cp
   - 'gs://qqin.page/Keys/cloud_build*'
-  - .
-#   volumes:
-#   - name: 'ssh'
-#     path: /root/.ssh
+  - '/root/.ssh/'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
 # - name: 'gcr.io/cloud-builders/git'
 #   entrypoint: 'chmod'
 #   args:
@@ -16,15 +16,15 @@ steps:
 #   volumes:
 #   - name: 'ssh'
 #     path: /root/.ssh
-# # Copy known_hosts
-# - name: 'gcr.io/cloud-builders/gsutil'
-#   args:
-#   - cp
-#   - 'gs://qqin.page/Keys/known_hosts'
-#   - '/root/.ssh/known_hosts'
-#   volumes:
-#   - name: 'ssh'
-#     path: /root/.ssh
+# Copy known_hosts
+- name: 'gcr.io/cloud-builders/gsutil'
+  args:
+  - cp
+  - 'gs://qqin.page/Keys/known_hosts'
+  - '/root/.ssh/known_hosts'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
 # - name: 'gcr.io/cloud-builders/gcloud'
 #   args:
 #   - compute
@@ -37,7 +37,7 @@ steps:
   entrypoint: 'ssh'
   args:
   - -i
-  - cloud_build
+  - /root/.ssh/cloud_build
   - service-403422450929@35.196.143.123
   - 'bash -s'
   - < deploy.sh
