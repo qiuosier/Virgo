@@ -1,53 +1,37 @@
 steps:
-  # Copy the ssh key
-- name: 'gcr.io/cloud-builders/gsutil'
+# Copy the ssh key
+# - name: 'gcr.io/cloud-builders/gsutil'
+#   args:
+#   - cp
+#   - 'gs://qqin.page/Keys/cloud_build'
+#   - '/root/.ssh/cloud_build'
+#   volumes:
+#   - name: 'ssh'
+#     path: /root/.ssh
+# - name: 'gcr.io/cloud-builders/git'
+#   entrypoint: 'chmod'
+#   args:
+#   - '400'
+#   - '/root/.ssh/cloud_build'
+#   volumes:
+#   - name: 'ssh'
+#     path: /root/.ssh
+# # Copy known_hosts
+# - name: 'gcr.io/cloud-builders/gsutil'
+#   args:
+#   - cp
+#   - 'gs://qqin.page/Keys/known_hosts'
+#   - '/root/.ssh/known_hosts'
+#   volumes:
+#   - name: 'ssh'
+#     path: /root/.ssh
+- name: 'gcr.io/cloud-builders/gcloud'
   args:
-  - cp
-  - 'gs://qqin.page/Keys/cloud_build'
-  - '/root/.ssh/cloud_build'
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-- name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'chmod'
-  args:
-  - '400'
-  - '/root/.ssh/cloud_build'
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-# Copy known_hosts
-- name: 'gcr.io/cloud-builders/gsutil'
-  args:
-  - cp
-  - 'gs://qqin.page/Keys/known_hosts'
-  - '/root/.ssh/known_hosts'
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-- name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'ls'
-  args:
-  - -a
-# Clone the repository
-- name: 'gcr.io/cloud-builders/git'
-  args:
-  - submodule
-  - update
-  - --init
-  - --recursive
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
-# Copy the files to server
-- name: 'eeacms/rsync'
-  args:
-  - 'rsync'
-  - -e
-  - 'ssh -i /root/.ssh/cloud_build'
-  - -r
-  - .
-  - service-403422450929@35.196.143.123:/var/virgo --delete
-  volumes:
-  - name: 'ssh'
-    path: /root/.ssh
+  - compute
+  - ssh
+  - service-403422450929@aries-micro
+  - --command
+  - 'bash -s' < deploy.sh
+  # volumes:
+  # - name: 'ssh'
+  #   path: /root/.ssh
