@@ -25,6 +25,11 @@ steps:
   volumes:
   - name: 'ssh'
     path: /root/.ssh
+- name: 'gcr.io/cloud-builders/gsutil'
+  entrypoint: 'chmod'
+  args:
+  - '+x'
+  - '/root/.ssh/cloud_build'
 # - name: 'gcr.io/cloud-builders/gcloud'
 #   args:
 #   - compute
@@ -36,7 +41,7 @@ steps:
 - name: 'gcr.io/cloud-builders/git'
   entrypoint: 'ls'
   args:
-  - -a
+  - -alG
   volumes:
   - name: 'ssh'
     path: /root/.ssh
