@@ -29,7 +29,7 @@ steps:
   args:
   - compute
   - ssh
-  - service-403422450929@aries-micro
+  - 'service-403422450929@aries-micro'
   - --command
   - 'bash -s' < deploy.sh
   # volumes:
