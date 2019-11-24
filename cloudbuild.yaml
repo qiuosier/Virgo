@@ -41,3 +41,6 @@ steps:
   - service-403422450929@35.196.143.123
   - 'bash -s'
   - < deploy.sh
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
