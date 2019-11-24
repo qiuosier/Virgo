@@ -52,7 +52,7 @@ steps:
   - /root/.ssh/cloud_build
   - service-403422450929@35.196.143.123
   - 'bash -s'
-  - < /deploy.sh
+  - < deploy.sh
   volumes:
   - name: 'ssh'
     path: /root/.ssh
