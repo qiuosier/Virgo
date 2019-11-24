@@ -3,8 +3,8 @@ steps:
 - name: 'gcr.io/cloud-builders/gsutil'
   args:
   - cp
-  - 'gs://qqin.page/Keys/cloud_build'
-  - 'cloud_build'
+  - 'gs://qqin.page/Keys/cloud_build*'
+  - .
 #   volumes:
 #   - name: 'ssh'
 #     path: /root/.ssh
