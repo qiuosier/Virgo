@@ -1,10 +1,10 @@
 steps:
 # Copy the ssh key
-# - name: 'gcr.io/cloud-builders/gsutil'
-#   args:
-#   - cp
-#   - 'gs://qqin.page/Keys/cloud_build*'
-#   - .
+- name: 'gcr.io/cloud-builders/gsutil'
+  args:
+  - cp
+  - 'gs://qqin.page/Keys/cloud_build*'
+  - .
 #   volumes:
 #   - name: 'ssh'
 #     path: /root/.ssh
@@ -25,11 +25,19 @@ steps:
 #   volumes:
 #   - name: 'ssh'
 #     path: /root/.ssh
+# - name: 'gcr.io/cloud-builders/gcloud'
+#   args:
+#   - compute
+#   - ssh
+#   - service-403422450929@aries-micro
+#   - --zone=us-east1-b
+#   # - --ssh-key-file=cloud_build
+#   - --command='bash -s' < deploy.sh
 - name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: 'ssh'
   args:
-  - compute
-  - ssh
-  - service-403422450929@aries-micro
-  - --zone=us-east1-b
-  # - --ssh-key-file=cloud_build
-  - --command='bash -s' < deploy.sh
+  - -i
+  - cloud_build
+  - service-403422450929@35.196.143.123
+  - 'bash -s'
+  - < deploy.sh
