@@ -33,8 +33,10 @@ steps:
 #   - --zone=us-east1-b
 #   # - --ssh-key-file=cloud_build
 #   - --command='bash -s' < deploy.sh
-- name: 'gcr.io/cloud-builders/gcloud'
-  entrypoint: 'ls /'
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'ls'
+  args:
+  - -a
   volumes:
   - name: 'ssh'
     path: /root/.ssh
