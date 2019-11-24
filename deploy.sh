@@ -22,5 +22,5 @@ pip install --no-cache-dir -r /var/Rhythm/Virgo/requirements.txt
 python manage.py collectstatic
 # Deply the code
 echo "Copying source code..."
-rsync -r -d --info=progress2 /var/staging/Rhythm /var/Rhythm
+rsync -r -d --info=progress2 /var/staging/Rhythm /var/
 # END
