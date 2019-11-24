@@ -1,8 +1,0 @@
-cron:
-#- description: "Update stock data"
-#  url: /virgo/update/next/
-#  schedule: every 10 mins
-#- description: "Update stock symbols"
-#  url: /virgo/update/symbols/
-#  schedule: 1st monday of month 04:00
-  
