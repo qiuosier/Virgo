@@ -29,9 +29,5 @@ steps:
   args:
   - compute
   - ssh
-  - 'service-403422450929@aries-micro'
-  - --command
-  - 'bash -s' < deploy.sh
-  # volumes:
-  # - name: 'ssh'
-  #   path: /root/.ssh
+  - aries-micro
+  - --command='bash -s' < deploy.sh
