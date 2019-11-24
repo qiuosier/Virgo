@@ -29,7 +29,7 @@ steps:
   entrypoint: 'chmod'
   args:
   - '+x'
-  - '/root/.ssh/cloud_build'
+  - 'deploy.sh'
 # - name: 'gcr.io/cloud-builders/gcloud'
 #   args:
 #   - compute
