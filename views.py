@@ -107,4 +107,4 @@ def update_next(request):
     update_stock(symbol)
     # task = FunctionTask(update_stock, symbol)
     # task.run_async()
-    return HttpResponse("Updated %s." % symbol)
+    return HttpResponse("%s updated." % symbol)
