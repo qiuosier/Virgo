@@ -101,11 +101,13 @@ def update_next(request):
     """
     global last_idx
     global symbols
+    if not symbols:
+        symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     if last_idx and idx == last_idx:
         return HttpResponse("%s was already updated or being updated.")
     last_idx = idx
-    # symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
+    
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
