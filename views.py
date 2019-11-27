@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY")
 SP500_FILE = os.environ.get("SP500_PATH")
 SYMBOLS_FILE = os.environ.get("SYMBOLS_PATH")
+last_idx = 0
 
 
 def authentication_required(function=None):
@@ -79,9 +80,9 @@ def update_stock(symbol):
     logger.debug("Updating %s" % symbol)
     data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
     stock = data_source.get_stock(symbol)
-    logger.debug("Updating daily data...")
+    logger.debug("Checking daily data...")
     stock.daily_series()
-    logger.debug("Updating intraday data...")
+    logger.debug("Checking intraday data...")
     stock.intraday_series()
 
 
@@ -94,9 +95,16 @@ def update_next(request):
     There will be 144 updates per day, 1008 updates per week.
 
     """
+    global last_idx
+    idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
+    if last_idx and idx == last_idx:
+        return HttpResponse("%s was already updated or being updated.")
+    last_idx = idx
     symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
-    FunctionTask(update_stock, symbol).run_async()
-    return HttpResponse("Updating %s" % symbol)
+    update_stock(symbol)
+    # task = FunctionTask(update_stock, symbol)
+    # task.run_async()
+    return HttpResponse("Updated %s." % symbol)
