@@ -12,11 +12,14 @@ from Aries.tasks import FunctionTask
 from .virgo_stock.source import AlphaVantage
 from .virgo_stock.plotly import Candlestick
 from .virgo_stock import sp500
+
+
 logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY")
 SP500_FILE = os.environ.get("SP500_PATH")
 SYMBOLS_FILE = os.environ.get("SYMBOLS_PATH")
 last_idx = 0
+symbols = []
 
 
 def authentication_required(function=None):
@@ -66,6 +69,7 @@ def update_symbols(request):
     """Updates the list of symbols for requesting data using update_next()
     """
     update_sp500(request)
+    global symbols
     symbols = json.load(StorageFile.init(SP500_FILE)).get("sp500")
     symbols.extend([
         "DJI",
@@ -96,11 +100,12 @@ def update_next(request):
 
     """
     global last_idx
+    global symbols
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     if last_idx and idx == last_idx:
         return HttpResponse("%s was already updated or being updated.")
     last_idx = idx
-    symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
+    # symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
