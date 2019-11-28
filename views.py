@@ -100,17 +100,18 @@ def update_next(request):
 
     """
     global last_idx
+    # Load symbols to memory to avoid reading the file everytime.
     global symbols
     if not symbols:
         symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
-    idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
-    if last_idx and idx == last_idx:
-        return HttpResponse("%s was already updated or being updated.")
-    last_idx = idx
-    
+
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
+    if last_idx and idx == last_idx:
+        return HttpResponse("%s was already updated or being updated." % symbols[idx])
+    last_idx = idx
+    
     update_stock(symbol)
     # task = FunctionTask(update_stock, symbol)
     # task.run_async()
