@@ -106,10 +106,11 @@ def update_next(request):
         symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
 
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
-    logger.debug("Index: %s" % idx)
     symbol = symbols[idx]
     if last_idx and idx == last_idx:
-        return HttpResponse("%s was already updated or being updated." % symbols[idx])
+        message = "%s was already updated or being updated." % symbols[idx]
+        logger.debug(message)
+        return HttpResponse(message)
     last_idx = idx
     
     update_stock(symbol)
