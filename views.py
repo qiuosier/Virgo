@@ -7,7 +7,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render
-from Aries.storage import StorageFile
+from Aries.storage import StorageFile, StorageFolder
 from Aries.tasks import FunctionTask
 from .virgo_stock.source import AlphaVantage
 from .virgo_stock.plotly import Candlestick
@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("ALPHA_VANTAGE_API_KEY")
 SP500_FILE = os.environ.get("SP500_PATH")
 SYMBOLS_FILE = os.environ.get("SYMBOLS_PATH")
+CACHE_FOLDER = "gs://qiu_virgo/stocks/"
 last_idx = 0
-symbols = []
+symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
 
 
 def authentication_required(function=None):
@@ -46,7 +47,7 @@ def candle_stick(request, symbol, start=None, end=None):
     if start is None:
         start = "2019-01-01"
     logger.debug("Getting data of %s" % symbol)
-    data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
+    data_source = AlphaVantage(API_KEY, CACHE_FOLDER)
     stock = data_source.get_stock(symbol)
     daily_chart = Candlestick(stock.daily_series(start, end)).set_title(symbol)
     return render(request, "virgo/candle.html", {
@@ -82,7 +83,7 @@ def update_symbols(request):
 
 def update_stock(symbol):
     logger.debug("Updating %s" % symbol)
-    data_source = AlphaVantage(API_KEY, "gs://qiu_virgo/stocks/")
+    data_source = AlphaVantage(API_KEY, CACHE_FOLDER)
     stock = data_source.get_stock(symbol)
     logger.debug("Checking daily data...")
     stock.daily_series()
@@ -102,8 +103,6 @@ def update_next(request):
     global last_idx
     # Load symbols to memory to avoid reading the file everytime.
     global symbols
-    if not symbols:
-        symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
 
     idx = round(datetime.datetime.now().timestamp() / 60 / 10) % len(symbols)
     symbol = symbols[idx]
@@ -117,3 +116,11 @@ def update_next(request):
     # task = FunctionTask(update_stock, symbol)
     # task.run_async()
     return HttpResponse("%s updated." % symbol)
+
+
+def update_status(request):
+    data_source = AlphaVantage(API_KEY, CACHE_FOLDER)
+    return render(request, "virgo/cache_status.html", {
+        "title": "Cached Data",
+        "data": data_source.last_cached(symbols)
+    })

@@ -93,6 +93,7 @@ class AlphaVantage(DataSourceInterface):
     intraday_time_fmt = "_%Y-%m-%d_%H%M"
     date_fmt = "%Y-%m-%d"
     daily_series_type = "TIME_SERIES_DAILY_ADJUSTED"
+    intraday_series_type = "TIME_SERIES_INTRADAY"
 
     def __init__(self, api_key, cache_folder=None):
         """Initialize the AlphaVantage Data Source
@@ -104,8 +105,12 @@ class AlphaVantage(DataSourceInterface):
         """
         self.api_key = api_key
         self.cache = cache_folder
+        
         if self.cache:
-            StorageFolder.init(self.cache).create()
+            self.cache_folder = StorageFolder.init(self.cache)
+            self.cache_folder.create()
+        else:
+            self.cache_folder = None
 
         self.web_api = AlphaVantageAPI(api_key, datatype="csv")
 
@@ -162,6 +167,12 @@ class AlphaVantage(DataSourceInterface):
         file_path = os.path.join(self.cache, filename)
         return file_path
 
+    def __daily_cache_prefix(self, symbol):
+        return "%s_%s_" % (str(symbol).replace(".", "-").upper(), self.daily_series_type)
+
+    def __intraday_cache_prefix(self, symbol):
+        return "%s_%s_" % (str(symbol).replace(".", "-").upper(), self.intraday_series_type)
+
     def __get_valid_daily_cache(self, symbol):
         """Gets the latest un-expired cache file for daily data.
 
@@ -180,8 +191,7 @@ class AlphaVantage(DataSourceInterface):
         return None
 
     def __get_all_daily_cache(self, symbol):
-        symbol = str(symbol).replace(".", "-")
-        prefix = "%s_%s_" % (symbol.upper(), self.daily_series_type)
+        prefix = self.__daily_cache_prefix(symbol)
         logger.debug("Getting cache files with prefix: %s" % prefix)
         file_objs = StorageFolder.init(self.cache).filter_files(prefix)
         return file_objs
@@ -237,6 +247,9 @@ class AlphaVantage(DataSourceInterface):
             else:
 
                 df = self.__request_data(symbol, series_type, 'full')
+                if df.empty:
+                    logger.warning("Data frame is empty.")
+                    return pd.DataFrame(columns=['timestamp', 'open', 'close', 'high', 'low', 'volume'])
                 self.__save_data_frame(df, symbol, series_type)
 
                 # Merge existing daily data with the newly requested data
@@ -305,8 +318,7 @@ class AlphaVantage(DataSourceInterface):
 
         Returns (str): prefix for the temporary file name.
         """
-        series_type = "TIME_SERIES_INTRADAY"
-        prefix = "%s_%s_cached" % (symbol.upper(), series_type)
+        prefix = "%s_%s_cached" % (symbol.upper(), self.intraday_series_type)
         return prefix
 
     def __intraday_cache_files(self, symbol):
@@ -382,7 +394,7 @@ class AlphaVantage(DataSourceInterface):
         Returns: A pandas data frame of intraday series data.
 
         """
-        series_type = "TIME_SERIES_INTRADAY"
+        series_type = self.intraday_series_type
         cached_file = self.__intraday_valid_cache(symbol)
         if cached_file:
             df = pd.read_csv(cached_file, index_col=0, parse_dates=['timestamp'])
@@ -420,7 +432,7 @@ class AlphaVantage(DataSourceInterface):
             if date is None and there is no data available in the last 100 days.
 
         """
-        series_type = "TIME_SERIES_INTRADAY"
+        series_type = self.intraday_series_type
         # requested_date stores the original requested date
         requested_date = date
         day_delta = 0
@@ -458,3 +470,31 @@ class AlphaVantage(DataSourceInterface):
             df.set_index('timestamp', inplace=True)
         df.symbol = symbol
         return df
+
+    def __get_last_cached(self, cached_files, prefix):
+        files = [f for f in cached_files if str(f).startswith(prefix)]
+        files.sort(reverse=True)
+        if files:
+            return {
+                "date": files[0].strip(prefix).strip(".csv"),
+                "path": os.path.join(self.cache, files[0]),
+            }
+        return {"date": None, "path": None}
+
+    def last_cached(self, symbols):
+        cached_files = [f for f in self.cache_folder.file_names if "cached" not in f]
+        data = []
+        for symbol in symbols:
+            entry = {
+                "symbol": symbol,
+            }
+            entry["daily"] = self.__get_last_cached(
+                cached_files,
+                self.__daily_cache_prefix(symbol)
+            )
+            entry["intraday"] = self.__get_last_cached(
+                cached_files,
+                self.__intraday_cache_prefix(symbol)
+            )
+            data.append(entry)
+        return data
