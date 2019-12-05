@@ -3,7 +3,7 @@ import logging
 import json
 import datetime
 from functools import wraps
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseBadRequest
 from django.urls import reverse
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -23,7 +23,7 @@ last_idx = 0
 symbols = json.load(StorageFile.init(SYMBOLS_FILE)).get("symbols")
 
 
-def authentication_required(function=None):
+def token_required(function=None):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
@@ -32,7 +32,7 @@ def authentication_required(function=None):
                 session["virgo_token"] = request.GET.get("virgo_token")
             if session.get("virgo_token") == os.environ.get("VIRGO_TOKEN"):
                 return view_func(request, *args, **kwargs)
-            return HttpResponseRedirect(reverse("virgo:index"))
+            return HttpResponseBadRequest("Invalid Token")
         return _wrapped_view
     if function:
         return decorator(function)
@@ -43,6 +43,7 @@ def index(request):
     return HttpResponse("This is the homepage for project Virgo.")
 
 
+@token_required
 def candle_stick(request, symbol, start=None, end=None):
     if start is None:
         start = "2019-01-01"
@@ -118,7 +119,8 @@ def update_next(request):
     return HttpResponse("%s updated." % symbol)
 
 
-def update_status(request):
+@token_required
+def view_update_status(request):
     data_source = AlphaVantage(API_KEY, CACHE_FOLDER)
     return render(request, "virgo/cache_status.html", {
         "title": "Cached Data",

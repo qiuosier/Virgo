@@ -10,5 +10,5 @@ urlpatterns = [
     url(r'^update/sp500/$', views.update_sp500, name='update_sp500'),
     url(r'^update/symbols/$', views.update_symbols, name='update_symbols'),
     url(r'^update/next/$', views.update_next, name='update_next'),
-    url(r'^update/status/$', views.update_status, name='update_status')
+    url(r'^update/status/$', views.view_update_status, name='view_update_status')
 ]
