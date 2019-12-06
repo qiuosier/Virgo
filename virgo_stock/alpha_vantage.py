@@ -1,3 +1,5 @@
+"""This module implements a simple AlphaVantage python API
+"""
 import requests
 import time
 import datetime

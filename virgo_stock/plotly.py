@@ -29,12 +29,14 @@ class Candlestick(PlotlyFigure):
         )
         super().__init__(plotly_layout=layout)
         self.set_title(title)
-        if hasattr(data_frame, "symbol"):
-            symbol = data_frame.symbol
+
+    def plot(self):
+        if hasattr(self.df, "symbol"):
+            symbol = self.df.symbol
         else:
             symbol = ""
         self.candle_stick(
-            data_frame,
+            self.df,
             increasing=dict(
                 line=dict(
                     color=self.INCREASING_COLOR
@@ -48,14 +50,26 @@ class Candlestick(PlotlyFigure):
             name=symbol
         )
         self.bar(
-            data_frame.index, 
-            data_frame.volume, 
+            self.df.index,
+            self.df.volume,
             "Volume", 
             yaxis='y2',
             marker=dict(
                 color=self.volume_colors()
             )
         )
+        return super().plot()
+
+    def subset(self, center, r):
+        length = len(self.df)
+        l = center - r
+        h = center + r
+        if l < 0:
+            l = 0
+        if h > length - 1:
+            h = length - 1
+        self.df = self.df.iloc[l:h]
+        return self
 
     def volume_colors(self):
         colors = []
