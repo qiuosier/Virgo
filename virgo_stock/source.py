@@ -30,7 +30,7 @@ class DataSourceInterface:
         """Gets a pandas data frame of daily stock data.
 
         Args:
-            symbol: The name of the equity/stock.
+            symbol: The symbol of the equity/stock, e.g. AAPL.
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
@@ -56,6 +56,14 @@ class DataSourceInterface:
         raise NotImplementedError()
 
     def get_stock(self, symbol):
+        """Gets a stock object by symbol
+        
+        Args:
+            symbol (str): The symbol of the equity/stock, e.g. AAPL.
+        
+        Returns:
+            [type]: [description]
+        """
         return Stock(symbol, self)
 
 
