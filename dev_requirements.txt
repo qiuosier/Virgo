@@ -1,4 +1,2 @@
 jupyter
 jupyter_http_over_ws
-gcloud==0.18.3
-coverage==4.5

@@ -285,6 +285,13 @@ class AlphaVantage(DataSourceInterface):
     def get(self, **kwargs):
         return self.web_api.get_dataframe(**kwargs)
 
+    def parse_date(date, default):
+        if not date:
+            date = default
+        if isinstance(date, datetime.datetime):
+            date.strftime(self.date_fmt)
+        return date
+
     def get_daily_series(self, symbol, start=None, end=None):
         """
         Gets a pandas data frame of daily series data.
