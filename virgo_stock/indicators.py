@@ -107,7 +107,20 @@ class SingleSeries(Indicator):
         for i in range(0, len(series_n.index) - 1):
             if series_n[i + 1] < series_k[i + 1] and series_n[i] > series_k[i]:
                 crosses.append(i)
-        return series_n.index[crosses]
+        return crosses
+
+    def breaking_above(self, series):
+        """Finds the timestamps where the moving average breaking above another series.
+
+        Args:
+            series (pandas.Series): A pandas series.
+
+        Returns:
+            list: A list of indices where this series breaking above another series.
+        """
+        series_n = self.series
+        series_k = series
+        return self.series_cross(series_n, series_k)
 
     def local_minimums(self):
         return self.series[(self.series.shift(1) > self.series) & (self.series.shift(-1) > self.series)]
@@ -177,19 +190,6 @@ class MovingAverage(SingleSeries):
         """Default name for the moving average column in the data frame.
         """
         return "Moving_Avg_%s" % self.n
-
-    def breaking_above(self, series):
-        """Finds the timestamps where the moving average breaking above another series.
-
-        Args:
-            series (pandas.Series): A pandas series.
-
-        Returns:
-            list: A list of indices where this series breaking above another series.
-        """
-        series_n = self.series
-        series_k = series
-        return self.series_cross(series_n, series_k)
 
     @classmethod
     def n_breaking_k(cls, data_frame, n, k):

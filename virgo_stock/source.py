@@ -30,7 +30,7 @@ class DataSourceInterface:
         """Gets a pandas data frame of daily stock data.
 
         Args:
-            symbol: The name of the equity/stock.
+            symbol: The symbol of the equity/stock, e.g. AAPL.
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
@@ -56,6 +56,14 @@ class DataSourceInterface:
         raise NotImplementedError()
 
     def get_stock(self, symbol):
+        """Gets a stock object by symbol
+        
+        Args:
+            symbol (str): The symbol of the equity/stock, e.g. AAPL.
+        
+        Returns:
+            [type]: [description]
+        """
         return Stock(symbol, self)
 
 
@@ -276,6 +284,20 @@ class AlphaVantage(DataSourceInterface):
 
     def get(self, **kwargs):
         return self.web_api.get_dataframe(**kwargs)
+
+    def parse_date(date, default):
+        """Parses a string into a datetime object
+
+        Args:
+            date: a string represents a date in the format of self.date_fmt.
+            default: default date when date is empty or None.
+
+        """
+        if not date:
+            date = default
+        if isinstance(date, datetime.datetime):
+            date.strftime(self.date_fmt)
+        return date
 
     def get_daily_series(self, symbol, start=None, end=None):
         """

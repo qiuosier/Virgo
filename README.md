@@ -7,19 +7,19 @@ Virgo Stock is a package for financial technical analysis. This package is devel
 There are four major components in this package: Data Source, Stock, Indicator, and Strategy.
 
 ## Data Source
-This package relies on external source to provide market data. The `DataSourceInterface` acts as a layer between the data source and the `Stock` class. The `DataSourceInterface` is intended to provide a unified interface for accessing market data from different data source. 
+This package relies on external source to provide market data. The `DataSourceInterface` acts as a layer between the data source and the `Stock` class. The `DataSourceInterface` is intended to provide a unified interface for accessing market data from different data source. A subclass should be implemented for each data source.
 
 ### Alpha Vantage
 Alpha Vantage provides web API for stock data and more.
 
-This package implemented an `AlphaVantage` data source. The implementation here includes:
+This package implemented an `AlphaVantage` data source as a subclass of `DataSourceInterface`. The implementation here includes:
 1. The `AlphaVantageAPI` class as a simple python API for accessing the AlphaVantage data. See [more details](docs/AlphaVantage.md).
 2. An option to cache the data to reduce the outgoing API requests.
 
 See also: https://www.alphavantage.co/
 
 ## Stock
-The Stock component is designed to manipulate and transform stock data.
+The Stock component is designed to manipulate and transform stock/equity data.
 
 In this package, a `Stock` object represents a stock (or security). Stock objects provides methods for retrieving and manipulating series data of a particular stock. Two parameters are required to initialize a `Stock` object:
 * The symbol of the stock as a string.
