@@ -286,6 +286,13 @@ class AlphaVantage(DataSourceInterface):
         return self.web_api.get_dataframe(**kwargs)
 
     def parse_date(date, default):
+        """Parses a string into a datetime object
+
+        Args:
+            date: a string represents a date in the format of self.date_fmt.
+            default: default date when date is empty or None.
+
+        """
         if not date:
             date = default
         if isinstance(date, datetime.datetime):
