@@ -1,6 +1,7 @@
 import datetime
 import pandas as pd
 from collections import OrderedDict
+from .series import TimeDataFrame
 
 
 class DataPoint:
@@ -65,6 +66,8 @@ class DataPoint:
 
 
 class Stock:
+    date_fmt = "%Y-%m-%d"
+
     def __init__(self, symbol, data_source):
         """Initializes a Stock object.
 
@@ -77,7 +80,7 @@ class Stock:
         self.__daily_series = None
 
     @staticmethod
-    def __format_date_range(start, end):
+    def format_date_range(start, end):
         """Sets the start and/or end date if not specified.
         
         Args:
@@ -90,28 +93,44 @@ class Stock:
         if start is None:
             start = "1800-01-01"
         if end is None:
-            end = datetime.datetime.now().strftime("%Y-%m-%d")
+            end = datetime.datetime.now()
+        if isinstance(start, datetime.datetime):
+            start = start.strftime(Stock.date_fmt)
+        if isinstance(end, datetime.datetime):
+            start = start.strftime(Stock.date_fmt)
         return start, end
 
     def daily_series(self, start=None, end=None):
-        """Gets a pandas data frame of daily stock data series.
+        """Gets a TimeDataFrame of daily stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
         Returns:
-            A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+            A TimeDataFrame with daily timestamp as index, as well as at least 5 columns: 
+                open, high, low, close and volume.
 
         """
-
-        return self.data_source.get_daily_series(self.symbol, start, end)
+        start, end = Stock.format_date_range(start, end)
+        return TimeDataFrame(self.data_source.get_daily_series(self.symbol, start, end))
 
     def intraday_series(self, date=None):
-        return self.data_source.get_intraday_series(self.symbol, date)
+        """Gets the intraday series.
+        
+        Args:
+            date (str, optional): date for the time series, e.g. 2017-01-21.
+                Today will be used if date is not specified.
+        
+        Returns:
+            [type]: [description]
+        """
+        # Use today as date if date is not specified.
+        _, date = Stock.format_date_range(None, date)
+        return TimeDataFrame(self.data_source.get_intraday_series(self.symbol, date))
 
     def __aggregate_series(self, trans_func, start=None, end=None):
-        """Gets a pandas data frame of aggregated stock data series.
+        """Gets a TimeDataFrame of aggregated stock data series.
 
         Args:
             trans_func: A function transforms the timestamp to a string value.
@@ -120,12 +139,12 @@ class Stock:
             end: Ending date for the time series, e.g. 2017-02-22.
 
         Returns:
-            A pandas data frame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+            A TimeDataFrame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
             The timestamp of returned data point (data frame row) is the first timestamp of the aggregation period.
 
         """
         attributes = ["open", "high", "low", "close", "volume"]
-        start, end = Stock.__format_date_range(start, end)
+        start, end = Stock.format_date_range(start, end)
         df = self.daily_series(start, end)
         # Initialization
         aggregated_points = []
@@ -174,16 +193,16 @@ class Stock:
         )
         aggregated_df.set_index("timestamp", inplace=True)
         aggregated_df.symbol = self.symbol
-        return aggregated_df
+        return TimeDataFrame(aggregated_df)
 
     def weekly_series(self, start=None, end=None):
-        """Gets a pandas data frame of weekly stock data series.
+        """Gets a TimeDataFrame of weekly stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame with weekly timestamp as index, 
+        Returns: A TimeDataFrame with weekly timestamp as index, 
             as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the week.
 
@@ -202,13 +221,13 @@ class Stock:
         return self.__aggregate_series(transform_func, start, end)
 
     def monthly_series(self, start=None, end=None):
-        """Gets a pandas data frame of monthly stock data series.
+        """Gets a TimeDataFrame of monthly stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A pandas data frame with monthly timestamp as index, 
+        Returns: A TimeDataFrame with monthly timestamp as index, 
             as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the month.
 
