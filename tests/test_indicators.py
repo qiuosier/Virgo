@@ -8,24 +8,24 @@ import os
 import sys
 from tests.base import TestWithAlphaVantage
 from virgo_stock.stock import Stock
-from virgo_stock.indicators import SingleSeries, SMA, EMA
+from virgo_stock.indicators import SMA, EMA
 
 
-class TestTimeSeries(TestWithAlphaVantage):
-    def test_single_time_series_initialization(self):
-        stock = Stock("AAPL", self.data_source)
-        daily_series = stock.daily_series("2016-01-01", "2017-01-01")
-        SingleSeries(daily_series)
-        series_name = "Series_1"
-        self.assertIn(series_name, daily_series.columns)
-        for value in daily_series[series_name]:
-            self.assertIsNotNone(value)
+# class TestTimeSeries(TestWithAlphaVantage):
+#     def test_single_time_series_initialization(self):
+#         stock = Stock("AAPL", self.data_source)
+#         daily_series = stock.daily_series("2016-01-01", "2017-01-01")
+#         SingleSeries(daily_series)
+#         series_name = "Series_1"
+#         self.assertIn(series_name, daily_series.columns)
+#         for value in daily_series[series_name]:
+#             self.assertIsNotNone(value)
 
 
 class TestMovingAverage(TestWithAlphaVantage):
-    def assert_set_values_equal(self, expect_set, actual_iterable):
-        actual_set = set([str(s)[:10] for s in actual_iterable])
-        self.assertEqual(actual_set, expect_set)
+    def assert_set_values_equal(self, expect_dates, actual_timestamps):
+        actual_dates = set([str(t)[:10] for t in actual_timestamps])
+        self.assertEqual(actual_dates, expect_dates)
 
     def test_sma(self):
         expect_golden_crosses = {

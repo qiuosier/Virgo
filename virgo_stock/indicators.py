@@ -6,21 +6,35 @@ The data frame should have timestamp as index, as well as 5 columns:
 The data frame stores data in reverse order, i.e. the first row is the latest data.
 """
 import pandas as pd
+from .series import TimeSeries, TimeDataFrame
 
 
-class Indicator:
-    """Represents a Time Series Indicator, with data stored in a pandas data frame.
+class IndicatorSeries(TimeSeries):
+    """Represents a TimeSeries indicator being calculated from TimeDataFrame stock data
     
     This is the base class for time series indicators, e.g. moving average.
     This is an abstract class and should not be used directly.
 
     """
+
+    _metadata = ['df']
+
     def __init__(self, data_frame, name=None):
+        """[summary]
+        
+        Args:
+            data_frame ([type]): [description]
+            name (str or None): The name for the new column containing the new indicator. 
+                If name is None or empty, a name will be generated using default_name()
+
+        """
+        # Stores the source data
         self.df = data_frame
         # Determine the name of the column
-        self.name = name
-        if not self.name:
-            self.name = self.default_name()
+        if not name:
+            name = self.default_name()
+        data = self.calculate()
+        TimeSeries.__init__(self, data, name=name)
     
     def default_name(self):
         """Generates a default name for the time series data.
@@ -39,56 +53,14 @@ class Indicator:
             if name not in self.df.columns:
                 return name
 
-    @property
-    def series(self):
-        """The pandas series (with datetime index) of the calculated indicator.
-        """
-        raise NotImplementedError()
-
     def calculate(self):
         raise NotImplementedError()
 
+    def local_minimums(self):
+        return self[(self.shift(1) > self) & (self.shift(-1) > self)]
 
-class SingleSeries(Indicator):
-    """Represents a time series indicator with single series of data.
-
-    This class is not intended to be used directly.
-    The calculate() method in this class does not do any calculation.
-    Instead, it creates a series with None as the values.
-    Initializing this class with a data frame will add an column with None values to the data frame.
-    
-    """
-    def __init__(self, data_frame, series_type='close', name=None):
-        """Initializes a time series. A new column will be added to the data_frame.
-        
-        Args:
-            data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
-            series_type (str, optional): The name of the data column to be used in calculating the new indicator. 
-                Defaults to 'close'.
-            name (str or None, optional): The name for the new column containing the new indicator. 
-                Defaults to None.
-        """
-        super().__init__(data_frame, name)
-        self.series_type = series_type
-        # Calculate the indicator
-        self.df[self.name] = self.calculate()
-
-    def calculate(self):
-        """Creates an empty time series.
-        
-        Returns:
-            pandas.Series: Empty series.
-        """
-        return self.df[self.series_type]
-    
-    @property
-    def series(self):
-        """The pandas series (with datetime index) of the calculated indicator.
-        
-        Returns:
-            pandas.Series: One-dimensional ndarray with datetime as axis label
-        """
-        return self.df.loc[:, self.name]
+    def local_maximums(self):
+        return self[(self.shift(1) < self) & (self.shift(-1) < self)]
 
     @staticmethod
     def series_cross(series_n, series_k):
@@ -118,53 +90,35 @@ class SingleSeries(Indicator):
         Returns:
             list: A list of indices where this series breaking above another series.
         """
-        series_n = self.series
+        series_n = self
         series_k = series
         return self.series_cross(series_n, series_k)
 
-    def local_minimums(self):
-        return self.series[(self.series.shift(1) > self.series) & (self.series.shift(-1) > self.series)]
 
-    def local_maximums(self):
-        return self.series[(self.series.shift(1) < self.series) & (self.series.shift(-1) < self.series)]
+class IndicatorDataFrame(TimeDataFrame):
 
+    _metadata = ['df']
 
-class MultiSeries(Indicator):
-    def __init__(self, data_frame, series_type='close', prefix=None):
+    def __init__(self, data_frame):
         """Initializes a multi-column time series. 
         Multiple new columns will be added to the data_frame.
         
         Args:
             data_frame (pandas.DataFrame): A pandas data frame containing stock data, 
-            series_type (str, optional): The name of the data column to be used in calculating 
-                the new indicator. Defaults to 'close'.
-            prefix (str or None, optional): The prefix for the new column containing the new indicator.
-                Defaults to None.
         """
-        super().__init__(data_frame, prefix)
-        self.series_type = series_type
-        self.names = []
-        self.calculate()
-
-    @property
-    def prefix(self):
-        return self.name
-
-    @property
-    def series(self):
-        """The pandas series (with datetime index) of the calculated indicator.
-        
-        Returns:
-            pandas.Series: One-dimensional ndarray with datetime as axis label
-        """
-        return self.df.loc[:, self.names]
+        self.df = data_frame
+        data = self.calculate()
+        TimeDataFrame.__init__(self, data)
 
     def calculate(self):
         raise NotImplementedError()
 
 
-class MovingAverage(SingleSeries):
-    def __init__(self, data_frame, n, series_type='close', name=None):
+class MovingAverage(IndicatorSeries):
+
+    _metadata = IndicatorSeries._metadata + ['n_point', 'series_type']
+
+    def __init__(self, data_frame, n_point, series_type='close', name=None):
         """Initialize a moving average object.
         Args:
             data_frame: A pandas data frame containing stock data, 
@@ -177,8 +131,9 @@ class MovingAverage(SingleSeries):
             name: The name of the calculated column in the returned data frame.
         
         """
-        self.n = n
-        super().__init__(data_frame, series_type, name)
+        self.n_point = n_point
+        self.series_type = series_type
+        IndicatorSeries.__init__(self, data_frame, name)
 
     def calculate(self):
         """Calculate the moving average series.
@@ -189,14 +144,14 @@ class MovingAverage(SingleSeries):
     def default_name(self):
         """Default name for the moving average column in the data frame.
         """
-        return "Moving_Avg_%s" % self.n
+        return "Moving_Avg_%s" % self.n_point
 
     @classmethod
     def n_breaking_k(cls, data_frame, n, k):
         """Finds the timestamps where n-day moving average breaking above k-day moving average.
         """
-        series_n = cls(data_frame, n).series
-        series_k = cls(data_frame, k).series
+        series_n = cls(data_frame, n)
+        series_k = cls(data_frame, k)
         return MovingAverage.series_cross(series_n, series_k)
 
     @classmethod
@@ -204,14 +159,14 @@ class MovingAverage(SingleSeries):
         """Finds the timestamps where short-term moving average breaking above 
             long-term moving average.
         """
-        return cls.n_breaking_k(data_frame, short_term, long_term)
+        return data_frame.index[cls.n_breaking_k(data_frame, short_term, long_term)]
 
     @classmethod
     def death_cross(cls, data_frame, short_term=50, long_term=200):
         """Finds the timestamps where short-term moving average crossing below 
             long-term moving average.
         """
-        return cls.n_breaking_k(data_frame, long_term, short_term)
+        return data_frame.index[cls.n_breaking_k(data_frame, long_term, short_term)]
 
 
 class SMA(MovingAverage):
@@ -221,7 +176,7 @@ class SMA(MovingAverage):
     def default_name(self):
         """Default name for the sample moving average column.
         """
-        return 'SMA_%s' % self.n
+        return 'SMA_%s' % self.n_point
 
     def calculate(self):
         """Calculates the simple moving average.
@@ -229,7 +184,7 @@ class SMA(MovingAverage):
         Returns:
             pandas.Series: a pandas series containing the simple moving average.
         """
-        series = self.df[self.series_type][::-1].rolling(self.n).mean()[::-1]
+        series = self.df[self.series_type][::-1].rolling(self.n_point).mean()[::-1]
         return series
 
 
@@ -244,7 +199,7 @@ class EMA(MovingAverage):
     def default_name(self):
         """Default name for the exponential moving average column.
         """
-        return 'EMA_%s' % self.n
+        return 'EMA_%s' % self.n_point
     
     def calculate(self):
         """Calculates the exponential moving average.
@@ -252,11 +207,11 @@ class EMA(MovingAverage):
         Returns:
             pandas.Series: a pandas series containing the exponential moving average.
         """
-        series = self.df[self.series_type][::-1].ewm(span=self.n).mean()[::-1]
+        series = self.df[self.series_type][::-1].ewm(span=self.n_point).mean()[::-1]
         return series
 
 
-class BollingerSeries(SingleSeries):
+class BollingerSeries(IndicatorSeries):
     """A series which is K times an N-period standard deviation above or below
         the moving average (upper or lower Bollinger Band)
 
@@ -264,28 +219,34 @@ class BollingerSeries(SingleSeries):
         https://en.wikipedia.org/wiki/Bollinger_Bands
         https://www.bollingerbands.com/bollinger-bands
     """
-    def __init__(self, data_frame, n_day=20, k_std=2, series_type='close', name=None):
-        self.n_day = n_day
+
+    _metadata = IndicatorSeries._metadata + ['n_point', 'k_std', 'series_type']
+
+    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', name=None):
+        self.n_point = n_point
         self.k_std = k_std
-        super().__init__(data_frame, series_type, name)
+        self.series_type = series_type
+        IndicatorSeries.__init__(self, data_frame, name)
 
     def default_name(self):
         return 'BB_%s_%+d' % (self.n_day, self.k_std)
 
     def calculate(self):
-        moving_average = self.df[self.series_type][::-1].rolling(self.n_day).mean()[::-1]
-        standard_deviation = self.df[self.series_type][::-1].rolling(self.n_day).std()[::-1]
+        moving_average = self.df[self.series_type][::-1].rolling(self.n_point).mean()[::-1]
+        standard_deviation = self.df[self.series_type][::-1].rolling(self.n_point).std()[::-1]
         return moving_average.add(self.k_std * standard_deviation)
 
 
-class BollingerBands(MultiSeries):
-    def __init__(self, data_frame, n_day=20, k_std=2, series_type='close', prefix=None):
-        self.n_day = n_day
-        self.k_std = k_std
-        super().__init__(data_frame, series_type, prefix)
+class BollingerBands(IndicatorDataFrame):
 
-    def default_name(self):
-        return 'BB_%s_%d' % (self.n_day, self.k_std)
+    _metadata = IndicatorDataFrame._metadata + ['n_point', 'k_std', 'series_type', 'prefix']
+
+    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', prefix=None):
+        self.n_point = n_point
+        self.k_std = k_std
+        self.series_type = series_type
+        self.prefix = prefix
+        IndicatorDataFrame.__init__(self, data_frame)
 
     def calculate(self):
         self.names = [
@@ -293,7 +254,7 @@ class BollingerBands(MultiSeries):
             self.prefix + "_lower",
             self.prefix + "_sma",
         ]
-        upper = BollingerSeries(self.df, self.n_day, self.k_std, self.series_type, self.names[0])
-        lower = BollingerSeries(self.df, self.n_day, -self.k_std, self.series_type, self.names[1])
-        sma = SMA(self.df, self.n_day, self.series_type, self.names[2])
+        upper = BollingerSeries(self.df, self.n_point, self.k_std, self.series_type, self.names[0])
+        lower = BollingerSeries(self.df, self.n_point, -self.k_std, self.series_type, self.names[1])
+        sma = SMA(self.df, self.n_point, self.series_type, self.names[2])
         return [upper, sma, lower]
