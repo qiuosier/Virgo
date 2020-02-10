@@ -113,7 +113,7 @@ class Stock:
         if isinstance(start, datetime.datetime):
             start = start.strftime(Stock.date_fmt)
         if isinstance(end, datetime.datetime):
-            start = start.strftime(Stock.date_fmt)
+            end = end.strftime(Stock.date_fmt)
         return start, end
 
     def daily_series(self, start=None, end=None):
@@ -136,13 +136,10 @@ class Stock:
         
         Args:
             date (str, optional): date for the time series, e.g. 2017-01-21.
-                Today will be used if date is not specified.
         
         Returns:
             [type]: [description]
         """
-        # Use today as date if date is not specified.
-        _, date = Stock.format_date_range(None, date)
         return DataSeries(self.data_source.get_intraday_series(self.symbol, date))
 
     def __aggregate_series(self, trans_func, start=None, end=None):

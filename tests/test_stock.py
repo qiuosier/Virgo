@@ -17,6 +17,13 @@ class TestDataSource(TestWithAlphaVantage):
         for i in range(len(actual_df)):
             self.assertEqual(actual_df.index[i], expect_df.index[i])
 
+    def test_intraday_series(self):
+        stock = self.get_stock("AAPL")
+        intraday = stock.intraday_series()
+        date = str(intraday.index[0])[:10]
+        for i in range(len(intraday)):
+            self.assertTrue(str(intraday.index[i]).startswith(date))
+
     def test_daily_series(self):
         """Tests getting daily series data.
         """
