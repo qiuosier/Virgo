@@ -1,7 +1,8 @@
 import datetime
 import pandas as pd
 from collections import OrderedDict
-from .series import TimeDataFrame
+from .series import TimeDataFrame, TimeSeries
+from . import indicators
 
 
 class DataPoint:
@@ -65,6 +66,21 @@ class DataPoint:
         return cls(timestamp, val_open, val_high, val_low, val_close, volume)
 
 
+class DataSeries(TimeDataFrame):
+    @property
+    def _constructor(self):
+        return DataSeries
+
+    @property
+    def _constructor_sliced(self):
+        return TimeSeries
+
+    def indicator(self, indicator_name, *args, **kwargs):
+        if not hasattr(indicators, indicator_name):
+            raise AttributeError("%s not found in indicators." % indicator_name)
+        indicator_class = getattr(indicators, indicator_name)
+        return indicator_class(self, *args, **kwargs)
+
 class Stock:
     date_fmt = "%Y-%m-%d"
 
@@ -101,19 +117,19 @@ class Stock:
         return start, end
 
     def daily_series(self, start=None, end=None):
-        """Gets a TimeDataFrame of daily stock data series.
+        """Gets daily stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
         Returns:
-            A TimeDataFrame with daily timestamp as index, as well as at least 5 columns: 
+            A DataSeries with daily timestamp as index, as well as at least 5 columns: 
                 open, high, low, close and volume.
 
         """
         start, end = Stock.format_date_range(start, end)
-        return TimeDataFrame(self.data_source.get_daily_series(self.symbol, start, end))
+        return DataSeries(self.data_source.get_daily_series(self.symbol, start, end))
 
     def intraday_series(self, date=None):
         """Gets the intraday series.
@@ -127,10 +143,10 @@ class Stock:
         """
         # Use today as date if date is not specified.
         _, date = Stock.format_date_range(None, date)
-        return TimeDataFrame(self.data_source.get_intraday_series(self.symbol, date))
+        return DataSeries(self.data_source.get_intraday_series(self.symbol, date))
 
     def __aggregate_series(self, trans_func, start=None, end=None):
-        """Gets a TimeDataFrame of aggregated stock data series.
+        """Gets aggregated stock data series.
 
         Args:
             trans_func: A function transforms the timestamp to a string value.
@@ -139,7 +155,7 @@ class Stock:
             end: Ending date for the time series, e.g. 2017-02-22.
 
         Returns:
-            A TimeDataFrame with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
+            A DataSeries with daily timestamp as index, as well as 5 columns: open, high, low, close and volume.
             The timestamp of returned data point (data frame row) is the first timestamp of the aggregation period.
 
         """
@@ -193,16 +209,16 @@ class Stock:
         )
         aggregated_df.set_index("timestamp", inplace=True)
         aggregated_df.symbol = self.symbol
-        return TimeDataFrame(aggregated_df)
+        return DataSeries(aggregated_df)
 
     def weekly_series(self, start=None, end=None):
-        """Gets a TimeDataFrame of weekly stock data series.
+        """Gets weekly stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeDataFrame with weekly timestamp as index, 
+        Returns: A DataSeries with weekly timestamp as index, 
             as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the week.
 
@@ -221,13 +237,13 @@ class Stock:
         return self.__aggregate_series(transform_func, start, end)
 
     def monthly_series(self, start=None, end=None):
-        """Gets a TimeDataFrame of monthly stock data series.
+        """Gets monthly stock data series.
 
         Args:
             start: Starting date for the time series, e.g. 2017-01-21.
             end: Ending date for the time series, e.g. 2017-02-22.
 
-        Returns: A TimeDataFrame with monthly timestamp as index, 
+        Returns: A DataSeries with monthly timestamp as index, 
             as well as 5 columns: open, high, low, close and volume.
             The timestamp of each data point (data frame row) is the first business day of the month.
 

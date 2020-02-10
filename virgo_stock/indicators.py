@@ -23,7 +23,7 @@ class IndicatorSeries(TimeSeries):
         """[summary]
         
         Args:
-            data_frame ([type]): [description]
+            data_frame: pandas DataFrame or array-like, iterable or list.
             name (str or None): The name for the new column containing the new indicator. 
                 If name is None or empty, a name will be generated using default_name()
 
@@ -50,11 +50,15 @@ class IndicatorSeries(TimeSeries):
         while True:
             i += 1
             name = "Series_%s" % i
-            if name not in self.df.columns:
+            if not hasattr(self.df, "columns") or name not in self.df.columns:
                 return name
 
     def calculate(self):
-        raise NotImplementedError()
+        if isinstance(self.df, pd.DataFrame):
+            # Returns the first column of a dataframe
+            return self.df.ix[:, 0]
+        # Returns self.df, this allows self.df to be any array type.
+        return self.df
 
     def local_minimums(self):
         return self[(self.shift(1) > self) & (self.shift(-1) > self)]
@@ -222,14 +226,14 @@ class BollingerSeries(IndicatorSeries):
 
     _metadata = IndicatorSeries._metadata + ['n_point', 'k_std', 'series_type']
 
-    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', name=None):
+    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', name=""):
         self.n_point = n_point
         self.k_std = k_std
         self.series_type = series_type
         IndicatorSeries.__init__(self, data_frame, name)
 
     def default_name(self):
-        return 'BB_%s_%+d' % (self.n_day, self.k_std)
+        return 'BB_%s_%+d' % (self.n_point, self.k_std)
 
     def calculate(self):
         moving_average = self.df[self.series_type][::-1].rolling(self.n_point).mean()[::-1]
@@ -241,7 +245,7 @@ class BollingerBands(IndicatorDataFrame):
 
     _metadata = IndicatorDataFrame._metadata + ['n_point', 'k_std', 'series_type', 'prefix']
 
-    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', prefix=None):
+    def __init__(self, data_frame, n_point=20, k_std=2, series_type='close', prefix="BB"):
         self.n_point = n_point
         self.k_std = k_std
         self.series_type = series_type
@@ -249,12 +253,16 @@ class BollingerBands(IndicatorDataFrame):
         IndicatorDataFrame.__init__(self, data_frame)
 
     def calculate(self):
-        self.names = [
+        names = [
             self.prefix + "_upper",
             self.prefix + "_lower",
             self.prefix + "_sma",
         ]
-        upper = BollingerSeries(self.df, self.n_point, self.k_std, self.series_type, self.names[0])
-        lower = BollingerSeries(self.df, self.n_point, -self.k_std, self.series_type, self.names[1])
-        sma = SMA(self.df, self.n_point, self.series_type, self.names[2])
-        return [upper, sma, lower]
+        upper = BollingerSeries(self.df, self.n_point, self.k_std, self.series_type)
+        lower = BollingerSeries(self.df, self.n_point, -self.k_std, self.series_type)
+        sma = SMA(self.df, self.n_point, self.series_type)
+        return {
+            self.prefix + "_upper": upper,
+            self.prefix + "_lower": lower,
+            self.prefix + "_sma": sma
+        }

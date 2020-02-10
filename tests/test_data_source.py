@@ -59,10 +59,10 @@ class TestDataSource(TestWithAlphaVantage):
         self.assertEqual(len(filenames), 1, "Files: %s" % filenames)
 
 
-class TestAlphaVantageAPI(TestWithAlphaVantage):
-    def test_make_7_api_requests(self):
-        web_api = AlphaVantageAPI(self.api_key)
-        for i in range(7):
-            logger.debug("Requesting ... %s" % i)
-            json_data = web_api.get_json(symbol="AAPL", function="TIME_SERIES_DAILY_ADJUSTED")
-            self.assertIsNotNone(json_data.get("Time Series (Daily)"))
+# class TestAlphaVantageAPI(TestWithAlphaVantage):
+#     def test_make_7_api_requests(self):
+#         web_api = AlphaVantageAPI(self.api_key)
+#         for i in range(7):
+#             logger.debug("Requesting ... %s" % i)
+#             json_data = web_api.get_json(symbol="AAPL", function="TIME_SERIES_DAILY_ADJUSTED")
+#             self.assertIsNotNone(json_data.get("Time Series (Daily)"))
