@@ -6,7 +6,7 @@ cache: pip
 install:
   - pip install -r requirements.txt
   - pip install -r Aries/requirements.txt
-  - pip install coverage python-coveralls
+  - pip install coverage coveralls-python
 script: coverage run --source=virgo_stock -m unittest discover -s tests -p "test_*.py"
 after_success:
   - coveralls
