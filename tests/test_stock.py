@@ -7,7 +7,7 @@ import pandas as pd
 import os
 import sys
 from tests.base import TestWithAlphaVantage
-from ..virgo_stock import sp500, plotly
+from virgo_stock import sp500, plotly
 
 
 class TestDataSource(TestWithAlphaVantage):
