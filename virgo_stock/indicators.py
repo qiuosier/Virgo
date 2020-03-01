@@ -137,6 +137,8 @@ class MovingAverage(IndicatorSeries):
             name: The name of the calculated column in the returned data frame.
         
         """
+        if not isinstance(n_point, int) and str(n_point).isdigit():
+            n_point = int(n_point)
         self.n_point = n_point
         self.series_type = series_type
         IndicatorSeries.__init__(self, data_frame, name)
