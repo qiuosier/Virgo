@@ -15,6 +15,8 @@ class IndicatorSeries(TimeSeries):
     This is the base class for time series indicators, e.g. moving average.
     This is an abstract class and should not be used directly.
 
+    The self.calculate() method will be called during initialization to initialize the data series.
+
     """
 
     _metadata = ['df']

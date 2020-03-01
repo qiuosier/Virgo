@@ -76,6 +76,20 @@ class DataSeries(TimeDataFrame):
         return TimeSeries
 
     def indicator(self, indicator_name, *args, **kwargs):
+        """Gets a indicator
+        
+        Args:
+            indicator_name (str)): A class name in indicators.py as a string.
+            indicator_name can also be a column name in the DataFrame.
+            For example: open, high, low or close.
+            In this case, the corresponding data columns will be returned as an IndicatorSeries.
+        
+        Raises:
+            AttributeError: If the class is not in indicators.py
+        
+        """
+        if indicator_name in self.columns:
+            return indicators.IndicatorSeries(self[indicator_name])
         if not hasattr(indicators, indicator_name):
             raise AttributeError("%s not found in indicators." % indicator_name)
         indicator_class = getattr(indicators, indicator_name)
