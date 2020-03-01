@@ -30,7 +30,8 @@ class Candlestick(PlotlyFigure):
         super().__init__(plotly_layout=layout)
         self.set_title(title)
 
-    def plot(self):
+    @property
+    def figure(self):
         if hasattr(self.df, "symbol"):
             symbol = self.df.symbol
         else:
@@ -58,7 +59,7 @@ class Candlestick(PlotlyFigure):
                 color=self.volume_colors()
             )
         )
-        return super().plot()
+        return super().figure
 
     def subset(self, center, r):
         length = len(self.df)
