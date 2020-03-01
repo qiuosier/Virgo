@@ -4,8 +4,9 @@ class Candlestick(PlotlyFigure):
     INCREASING_COLOR = '#4CAF50'
     DECREASING_COLOR = '#E53935'
 
-    def __init__(self, data_frame, title=""):
+    def __init__(self, data_frame, title="", symbol=""):
         self.df = data_frame
+        self.symbol = symbol
         layout = dict(
             xaxis=dict(
                 rangeslider=dict(
@@ -32,10 +33,6 @@ class Candlestick(PlotlyFigure):
 
     @property
     def figure(self):
-        if hasattr(self.df, "symbol"):
-            symbol = self.df.symbol
-        else:
-            symbol = ""
         self.candle_stick(
             self.df,
             increasing=dict(
@@ -48,7 +45,7 @@ class Candlestick(PlotlyFigure):
                     color=self.DECREASING_COLOR
                 )
             ),
-            name=symbol
+            name=self.symbol
         )
         self.bar(
             self.df.index,

@@ -67,6 +67,7 @@ class DataPoint:
 
 
 class DataSeries(TimeDataFrame):
+
     @property
     def _constructor(self):
         return DataSeries
