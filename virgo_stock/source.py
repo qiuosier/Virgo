@@ -201,8 +201,8 @@ class AlphaVantage(DataSourceInterface):
     def __get_all_daily_cache(self, symbol):
         prefix = self.__daily_cache_prefix(symbol)
         logger.debug("Getting cache files with prefix: %s" % prefix)
-        file_objs = StorageFolder.init(self.cache).filter_files(prefix)
-        return file_objs
+        storage_files = StorageFolder(self.cache).filter_files(prefix)
+        return storage_files
 
     def __save_data_frame(self, df, symbol, series_type):
         if df.empty:
@@ -214,13 +214,14 @@ class AlphaVantage(DataSourceInterface):
             df.to_csv(f)
         return file_path
 
-    def __merge_daily_cache(self, file_objs):
+    def __merge_daily_cache(self, storage_files):
         # Read data from all files into a dictionary.
         # This will eliminate duplicates.
         data = {}
-        for f in file_objs:
+        for storage_file in storage_files:
             try:
-                df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
+                with storage_file('r') as f:
+                    df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
             except Exception as ex:
                 logger.error("%s: %s" % (type(ex), str(ex)))
                 continue
@@ -263,16 +264,16 @@ class AlphaVantage(DataSourceInterface):
                 # Merge existing daily data with the newly requested data
                 # Each AlphaVantage response contains only about 5000 previous data points.
                 # Older data are not in the new responses.
-                files = self.__get_all_daily_cache(symbol)
-                if not files:
+                storage_files = self.__get_all_daily_cache(symbol)
+                if not storage_files:
                     logger.debug("Data files not found in %s" % self.cache)
                     return df
-                logger.debug("Merging %s files" % len(files))
-                df = self.__merge_daily_cache(files)
+                logger.debug("Merging %s files" % len(storage_files))
+                df = self.__merge_daily_cache(storage_files)
                 file_path = self.__save_data_frame(df, symbol, series_type)
                 # Delete old cache files.
-                files.sort(key=lambda x: x.name, reverse=True)
-                for f in files[1:]:
+                storage_files.sort(key=lambda x: x.name, reverse=True)
+                for f in storage_files[1:]:
                     if f.basename != os.path.basename(file_path):
                         logger.debug("Deleting %s..." % f.uri)
                         f.delete()
