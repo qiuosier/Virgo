@@ -193,9 +193,9 @@ class AlphaVantage(DataSourceInterface):
         for i in range(self.daily_cache_expiration):
             d = datetime.datetime.now() - datetime.timedelta(days=i)
             file_path = self.__cache_file_path(symbol, self.daily_series_type, d.strftime(self.date_fmt))
-            file_obj = StorageFile.init(file_path)
-            if file_obj.exists():
-                return file_obj
+            storage_file = StorageFile(file_path)
+            if storage_file.exists():
+                return storage_file
         return None
 
     def __get_all_daily_cache(self, symbol):
@@ -210,8 +210,7 @@ class AlphaVantage(DataSourceInterface):
             return None
         file_path = self.__cache_file_path(symbol, series_type)
         logger.debug("Saving %s rows to... %s" % (len(df), file_path))
-        storage_file = StorageFile.init(file_path)
-        with storage_file('w') as f:
+        with StorageFile.init(file_path, 'w') as f:
             df.to_csv(f)
         return file_path
 
@@ -248,10 +247,11 @@ class AlphaVantage(DataSourceInterface):
         """
         series_type = self.daily_series_type
         if self.cache:
-            file_obj = self.__get_valid_daily_cache(symbol)
-            if file_obj:
-                logger.debug("Reading existing data... %s" % file_obj)
-                df = pd.read_csv(file_obj, index_col=0, parse_dates=['timestamp'])
+            storage_file = self.__get_valid_daily_cache(symbol)
+            if storage_file:
+                logger.debug("Reading existing data from %s" % storage_file.uri)
+                with storage_file('r') as f:
+                    df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
             else:
 
                 df = self.__request_data(symbol, series_type, 'full')
@@ -354,7 +354,7 @@ class AlphaVantage(DataSourceInterface):
         """
         prefix = self.__intraday_cache_file_prefix(symbol)
         cached_files = []
-        cache_folder = StorageFolder.init(self.cache)
+        cache_folder = StorageFolder(self.cache)
         for f in cache_folder.files:
             if f.basename.startswith(prefix):
                 cached_files.append(f)
@@ -474,10 +474,11 @@ class AlphaVantage(DataSourceInterface):
             if self.cache:
                 # Check if data has been cached.
                 file_path = self.__cache_file_path(symbol, series_type, date)
-                file_obj = StorageFile.init(file_path)
-                if file_obj.exists():
+                storage_file = StorageFile(file_path)
+                if storage_file.exists():
                     logger.debug("Reading existing data... %s" % file_path)
-                    df = pd.read_csv(file_obj, index_col=0, parse_dates=['timestamp'])
+                    with storage_file('r') as f:
+                        df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
                 else:
                     df = self.__intraday_get_full_data(symbol)
                     df = df[(df['timestamp'] >= date) & (df['timestamp'] < next_date)]
