@@ -10,7 +10,7 @@ import sys
 import time
 import shutil
 from tests.base import TestWithAlphaVantage
-from Aries.storage import LocalFolder
+from Aries.storage import StorageFolder
 from virgo_stock.alpha_vantage import AlphaVantageAPI
 from virgo_stock.source import DataSourceInterface, AlphaVantage
 logger = logging.getLogger(__name__)
@@ -49,13 +49,13 @@ class TestDataSource(TestWithAlphaVantage):
         data_source = AlphaVantage(self.api_key, cache_folder=self.cache)
         df1 = data_source.get_daily_series("AAPL")
         self.assert_data_frame(df1)
-        filenames = LocalFolder(self.cache).file_names
+        filenames = StorageFolder(self.cache).file_names
         self.assertEqual(len(filenames), 1, "Files: %s" % filenames)
         # Get data again, cached data should be returned.
         df2 = data_source.get_daily_series("AAPL")
         self.assert_data_frame(df1)
         self.assertEqual(len(df1), len(df2))
-        filenames = LocalFolder(self.cache).file_names
+        filenames = StorageFolder(self.cache).file_names
         self.assertEqual(len(filenames), 1, "Files: %s" % filenames)
 
 
