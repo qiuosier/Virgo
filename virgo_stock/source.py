@@ -420,7 +420,9 @@ class AlphaVantage(DataSourceInterface):
         series_type = self.intraday_series_type
         cached_file = self.__intraday_valid_cache(symbol)
         if cached_file:
-            df = pd.read_csv(cached_file, index_col=0, parse_dates=['timestamp'])
+            logger.debug("Reading cached file: %s" % cached_file.uri)
+            with cached_file('r') as f:
+                df = pd.read_csv(f, index_col=0, parse_dates=['timestamp'])
             return df
         df = self.__request_data(symbol, series_type, 'full', interval="1min")
         file_path = os.path.join(self.cache, self.__intraday_cache_file_prefix(symbol)) \
